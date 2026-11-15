@@ -99,5 +99,15 @@
     'Unknown link format': 'Format de lien inconnu',
     'Link too large': 'Lien trop volumineux',
     'Not an image': 'Ce n’est pas une image',
+    // password prompt (codec)
+    'This browser cannot open password-protected presentations here.': 'Ce navigateur ne peut pas ouvrir ici les présentations protégées par mot de passe.',
+    'Wrong password': 'Mot de passe incorrect',
+    'Wrong password. Try again.': 'Mot de passe incorrect. Réessayez.',
+    'Password': 'Mot de passe',
+    'Protected presentation': 'Présentation protégée',
+    'Enter the password to open it.': 'Saisissez le mot de passe pour l’ouvrir.',
+    'Checking…': 'Vérification…',
+    'Open': 'Ouvrir',
+    'Cancel': 'Annuler',
   });
 })(window.PZ = window.PZ || {});

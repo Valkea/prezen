@@ -28,6 +28,7 @@
 | --- | --- |
 | Edit online | Open the app. Your decks appear in **My presentations** (this browser only). |
 | Share without an account | **Share** → copy the link. Anyone opening it gets their own copy. |
+| Restrict who can open it | **Menu → Password protection**, or the password field of **Share** / **Export**. Links and exported files (HTML, JSON) are then encrypted (AES-256-GCM, key derived from the password with PBKDF2) and ask for the password before opening. The copy in your browser stays unencrypted; links shared before keep working. |
 | Present anywhere, light file | **Export → Slideshow (HTML)**: one file with the deck and the player only (~120 KB + images). |
 | Edit from a flashdrive | **Export → Editable presentation (HTML)**, or **Ctrl+S**. Open it from the drive, edit, **Ctrl+S** again. In Chrome/Edge the file is overwritten in place (pick the same file once); other browsers download an updated copy. |
 | Print / PDF | **Ctrl+P** or **Export → PDF**, then *Save as PDF* in the print dialog. |
@@ -86,7 +87,7 @@ created from a local file point there.
 | `src/js/effects.js` | Effect library and the keyframe engine (Web Animations API) |
 | `src/js/render.js` | Slide → DOM, shared by editor, player, thumbnails and print |
 | `src/js/player.js`, `print.js` | Slideshow (+ presenter view) and PDF |
-| `src/js/codec.js` | Share links: JSON → deflate (`CompressionStream`) → base64url |
+| `src/js/codec.js` | Share links: JSON → deflate (`CompressionStream`) → base64url, optional password encryption (Web Crypto) and its prompt |
 | `src/js/storage.js`, `export.js` | Browser library, file open/save, self-contained HTML export |
 | `src/js/editor/*` | Editor UI: stage, panels, dialogs, Studio, welcome deck |
 | `src/js/boot.js` | Chooses what to open (link, embedded data, last deck) |
@@ -109,7 +110,8 @@ editable file can export and save new files with no network.
               "anim": { "effect": "rise", "trigger": "click|with|after", "duration": 600, "delay": 0, "order": 1 }, "…": "…" }]
   }],
   "effects": { "custom-…": { "kind": "transition", "in": [{ "x": 100 }, {}], "out": [{}, { "x": -100 }], "inTop": true } },
-  "assets": { "a…": "data:image/webp;base64,…" }
+  "assets": { "a…": "data:image/webp;base64,…" },
+  "password": "…"  // optional: links and files are then encrypted ("e…" packs, or {"enc": "e…"} in files)
 }
 ```
 

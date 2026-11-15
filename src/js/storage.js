@@ -49,17 +49,21 @@
 
   // ---------------------------------------------------------------- files
 
-  /** Extract the presentation from a .json file or from an exported PrezEn .html file. */
-  PZ.parseFileText = function (text) {
+  /** Extract the presentation from a .json file or from an exported PrezEn .html file.
+   *  Password-protected files ask for the password: resolves to null when that is cancelled. */
+  PZ.parseFileText = async function (text) {
     const t = text.trim();
+    let j;
     if (t[0] === '{') {
-      const j = JSON.parse(t);
-      return PZ.normalizeDoc(j.doc && j.app === 'prezen' ? j.doc : j);
+      j = JSON.parse(t);
+      if (j.app !== 'prezen' || !(j.doc || j.enc)) j = { doc: j };
+    } else {
+      const dom = new DOMParser().parseFromString(text, 'text/html');
+      const node = dom.getElementById('pz-data');
+      if (!node) throw new Error('This file does not contain a PrezEn presentation');
+      j = JSON.parse(node.textContent);
     }
-    const dom = new DOMParser().parseFromString(text, 'text/html');
-    const node = dom.getElementById('pz-data');
-    if (!node) throw new Error('This file does not contain a PrezEn presentation');
-    const j = JSON.parse(node.textContent);
+    if (typeof j.enc === 'string') return PZ.decodeDoc(j.enc, { cancel: true });
     return PZ.normalizeDoc(j.doc);
   };
 
@@ -73,11 +77,15 @@
     /** Pick a file: returns {doc, handle, name} or null. */
     async open() {
       if (typeof window.showOpenFilePicker === 'function') {
+        let handle = null, file = null;
         try {
-          const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Presentations', accept: { 'text/html': ['.html', '.htm'], 'application/json': ['.json'] } }] });
-          const file = await handle.getFile();
-          return { doc: PZ.parseFileText(await file.text()), handle, name: file.name };
-        } catch (e) { if (e.name === 'AbortError') return null; if (e instanceof SyntaxError || /PrezEn|presentation/i.test(e.message)) throw e; }
+          [handle] = await window.showOpenFilePicker({ types: [{ description: 'Presentations', accept: { 'text/html': ['.html', '.htm'], 'application/json': ['.json'] } }] });
+          file = await handle.getFile();
+        } catch (e) { if (e.name === 'AbortError') return null; } // other failures (e.g. file://): fall back to <input>
+        if (file) {
+          const doc = await PZ.parseFileText(await file.text());
+          return doc && { doc, handle, name: file.name };
+        }
       }
       return new Promise((resolve, reject) => {
         const input = PZ.h('input', { type: 'file', accept: '.html,.htm,.json', style: 'display:none' });
@@ -85,7 +93,7 @@
           const f = input.files[0];
           input.remove();
           if (!f) return resolve(null);
-          try { resolve({ doc: PZ.parseFileText(await f.text()), handle: null, name: f.name }); } catch (e) { reject(e); }
+          try { const doc = await PZ.parseFileText(await f.text()); resolve(doc && { doc, handle: null, name: f.name }); } catch (e) { reject(e); }
         });
         document.body.appendChild(input);
         input.click();

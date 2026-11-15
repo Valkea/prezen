@@ -146,6 +146,29 @@
     m = ui.modal({ title: t('Icons'), wide: true, content: [h('div', { class: 'dlg-url-row' }, search, online), status, grid] });
   };
 
+  // ---------------------------------------------------------------- password
+  /** Password field bound to doc.password. onChange runs after the password was set or removed. */
+  function passwordField(onChange) {
+    const input = h('input', { class: 'ui-input', type: 'password', value: E.doc.password || '', maxlength: '128', placeholder: t('None: anyone with the link or file can open it'), autocomplete: 'new-password', spellcheck: 'false' });
+    const apply = () => {
+      const v = input.value;
+      if (v === (E.doc.password || '')) return;
+      E.commit('Password', (d) => { if (v) d.password = v; else delete d.password; });
+      if (onChange) onChange();
+    };
+    input.addEventListener('change', apply);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); apply(); } });
+    const eye = ui.iconBtn('eye', t('Show / hide the password'), () => { input.type = input.type === 'password' ? 'text' : 'password'; });
+    return h('div', { class: 'dlg-password' },
+      h('label', { class: 'ui-label', text: t('Password to open the presentation (optional)') }),
+      h('div', { class: 'dlg-url-row' }, input, eye),
+      h('p', { class: 'ed-hint', text: t('Share links and exported files (HTML, JSON) are then encrypted with it and ask for it before opening. The copy in this browser stays unencrypted. Anyone who knows the password can open, copy and share the presentation, and links shared earlier keep working without it.') }));
+  }
+
+  D.password = function () {
+    ui.modal({ title: t('Password protection'), content: passwordField(() => PZ.toast(E.doc.password ? t('Password set') : t('Password removed'))) });
+  };
+
   // ---------------------------------------------------------------- share link
   D.share = function () {
     const out = h('textarea', { class: 'ui-textarea ui-mono dlg-link', rows: 4, readonly: true });
@@ -169,6 +192,7 @@
       title: t('Share with a link'), wide: true,
       content: [
         h('p', { class: 'ed-hint', text: t('The whole presentation is compressed into the link itself, after the # sign. Browsers never send that part to a server: nothing is uploaded, no account is needed. Anyone with the link can open (and copy) the presentation.') }),
+        passwordField(() => regen()),
         ui.toggle(false, (v) => { playMode = v; regen(); }, t('Open directly as a slideshow')),
         ui.toggle(false, (v) => { noAssets = v; regen(); }, t('Leave out uploaded (embedded) images')),
         out, info,
@@ -215,6 +239,7 @@
         h('div', { class: 'dlg-opts' },
           ui.toggle(opts.embedImages, (v) => { opts.embedImages = v; }, t('Embed linked images (Drive, S3, URLs…) so the file works offline')),
           ui.toggle(opts.embedFonts, (v) => { opts.embedFonts = v; }, t('Embed Google Fonts (bigger file, perfect offline typography)'))),
+        passwordField(),
         h('p', { class: 'ed-hint', text: t('Exported files open in the current language ({lang}).', { lang: PZ.LANGS[PZ.lang] }) }),
         status,
       ],

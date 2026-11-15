@@ -111,7 +111,7 @@
   E.autosave = autosave;
 
   async function fileBlob(name) {
-    if (/\.json$/i.test(name)) return new Blob([PZ.buildJson(E.doc)], { type: 'application/json' });
+    if (/\.json$/i.test(name)) return new Blob([await PZ.buildJson(E.doc)], { type: 'application/json' });
     const r = await PZ.buildHtml(E.doc, { mode: 'editor' });
     return new Blob([r.html], { type: 'text/html' });
   }
@@ -387,6 +387,7 @@
       { label: t('Export…'), icon: 'upload', run: () => PZ.edDialogs.exportDlg() },
       { label: t('Print / PDF'), icon: 'pdf', kbd: MOD + 'P', run: () => PZ.printDoc(E.doc) },
       { label: t('Share link…'), icon: 'link', run: () => PZ.edDialogs.share() },
+      { label: E.doc.password ? t('Password protection: on…') : t('Password protection…'), icon: E.doc.password ? 'lock' : 'unlock', run: () => PZ.edDialogs.password() },
       '-',
       { label: t('Page size & theme…'), icon: 'sliders', run: () => PZ.edDialogs.pageSetup() },
       { label: t('Language: {name}', { name: PZ.LANGS[PZ.lang] }), icon: 'globe', run: () => langMenu(anchor) },

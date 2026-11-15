@@ -358,7 +358,8 @@
     const pres = files.find((f) => /\.(html?|json)$/i.test(f.name));
     if (pres) {
       try {
-        const doc = PZ.parseFileText(await pres.text());
+        const doc = await PZ.parseFileText(await pres.text());
+        if (!doc) return;
         if (await PZ.ui.confirm(t('Open presentation'), t('Open “{title}” from {file}? The current presentation stays in your browser library.', { title: doc.title, file: pres.name }), t('Open'))) E.load(doc);
       } catch (err) { PZ.toast(t('Cannot open this file: {msg}', { msg: err.message }), { type: 'error' }); }
       return;

@@ -82,6 +82,23 @@ body.pz-player-body { margin: 0; background: #000; overflow: hidden; }
 
 .pz-fatal { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ddd; background: #111; font-family: system-ui, sans-serif; }
 
+/* ---------------------------------------------------------------- password prompt (protected links and files) */
+.pz-lock { position: fixed; inset: 0; z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 16px; background: #11131a; color: #e6e8ef; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+.pz-lock-box { width: min(360px, 100%); display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 32px 28px; border-radius: 14px; background: #1b1e29; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45); box-sizing: border-box; }
+.pz-lock-box h1 { margin: 4px 0 0; font-size: 20px; font-weight: 650; }
+.pz-lock-box p { margin: 0; color: #a3a9bb; font-size: 14px; line-height: 1.45; }
+.pz-lock-ico { width: 40px; height: 40px; color: #8d8df7; }
+.pz-lock-ico svg { width: 100%; height: 100%; }
+.pz-lock-input { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 10px 12px; border-radius: 8px; border: 1px solid #353a4d; background: #11131a; color: inherit; font: inherit; font-size: 15px; outline: none; }
+.pz-lock-input:focus { border-color: #5b5bf0; box-shadow: 0 0 0 3px rgba(91, 91, 240, 0.3); }
+.pz-lock-box .pz-lock-err { min-height: 1.45em; color: #ff8a8a; font-size: 13px; }
+.pz-lock-btns { display: flex; gap: 8px; width: 100%; justify-content: flex-end; }
+.pz-lock-btn { flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid #353a4d; background: transparent; color: inherit; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pz-lock-btn:hover { background: #262a38; }
+.pz-lock-primary { border-color: #5b5bf0; background: #5b5bf0; color: #fff; }
+.pz-lock-primary:hover { background: #4b4be0; }
+.pz-lock-btn:disabled { opacity: 0.6; cursor: wait; }
+
 /* ---------------------------------------------------------------- presenter window */
 .pz-presenter-body { margin: 0; background: #11131a; color: #e6e8ef; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; height: 100vh; overflow: hidden; }
 .pzp { display: grid; grid-template-columns: 1.6fr 1fr; grid-template-rows: 1fr auto; gap: 16px; padding: 16px; height: 100vh; box-sizing: border-box; }

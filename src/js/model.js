@@ -1,7 +1,7 @@
 /* PrezEn · model: the document format, element factories, defaults and validation.
  *
  * A presentation (doc) is plain JSON:
- *   { v:1, id, title, w, h, theme, slides:[slide], effects:{id: customEffect}, assets:{id: dataURL} }
+ *   { v:1, id, title, w, h, theme, slides:[slide], effects:{id: customEffect}, assets:{id: dataURL}, password? }
  *   slide:   { id, bg, transition:{effect, duration, easing}, auto, hidden, notes, els:[element] }
  *   element: { id, type:'text'|'image'|'shape'|'icon', x, y, w, h, rot, opacity, locked, shadow, link, anim, ... }
  * Coordinates are logical pixels of the slide (1920×1080 for 16:9) whatever the screen size.
@@ -299,6 +299,8 @@
       slides: (Array.isArray(raw.slides) ? raw.slides : []).map((s) => PZ.normalizeSlide(s, theme)).filter(Boolean),
       effects: {}, assets: {}, created: N(raw.created, Date.now()), updated: N(raw.updated, Date.now()),
     };
+    const pw = S(raw.password, '', 128);
+    if (pw) doc.password = pw; // asked before opening shared links and exported files (see codec.js)
     if (!doc.slides.length) doc.slides.push(PZ.newSlide(doc, 'blank'));
     if (raw.effects && typeof raw.effects === 'object') {
       for (const k of Object.keys(raw.effects)) {

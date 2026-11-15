@@ -19,6 +19,27 @@ test('share links round-trip the whole presentation', async () => {
   assert.ok(packed.length < JSON.stringify(d).length / 3, 'compressed');
 });
 
+test('password-protected links are encrypted and need the password', async () => {
+  const d = PZ.sampleDoc();
+  d.password = 'correct horse';
+  const packed = await PZ.encodeDoc(d);
+  assert.ok(PZ.isLocked(packed));
+  assert.match(packed, /^e[A-Za-z0-9_-]+$/);
+  await assert.rejects(PZ.unpackJson(packed), /Unknown link format/);
+  await assert.rejects(PZ.decodeDoc(packed, { password: 'wrong' }), (e) => e.wrongPassword === true);
+  const back = await PZ.decodeDoc(packed, { password: 'correct horse' });
+  assert.equal(back.password, 'correct horse');
+  assert.deepEqual(plain(back), plain(PZ.normalizeDoc(plain(d))));
+  assert.notEqual(await PZ.encodeDoc(d), packed, 'fresh salt and iv each time');
+});
+
+test('documents without a password stay open', async () => {
+  const d = PZ.newDoc();
+  assert.equal(PZ.normalizeDoc(plain(d)).password, undefined);
+  assert.equal(PZ.normalizeDoc(Object.assign(plain(d), { password: 42 })).password, undefined);
+  assert.equal(PZ.isLocked(await PZ.encodeDoc(d)), false);
+});
+
 test('false values survive links (inTop:false, autoH:false)', async () => {
   const d = PZ.newDoc();
   d.slides[0].els[0].autoH = false;

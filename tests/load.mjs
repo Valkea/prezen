@@ -8,7 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 export function load(files) {
   const ctx = {
-    console, setTimeout, clearTimeout, TextEncoder, TextDecoder, CompressionStream, DecompressionStream, Blob, Response, btoa, atob, URL,
+    console, setTimeout, clearTimeout, TextEncoder, TextDecoder, CompressionStream, DecompressionStream, Blob, Response, btoa, atob, URL, crypto,
     CSS: { supports: (p, v) => /^(#[0-9a-f]{3,8}|[a-z]+|rgba?\([\d.,\s%]+\))$/i.test(v), escape: (s) => s },
     location: { protocol: 'https:', origin: 'https://example.org', pathname: '/prezen/', hash: '' },
     navigator: { platform: 'Linux', userAgent: 'node' },

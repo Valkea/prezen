@@ -2,7 +2,8 @@
  *   1. a share link (#p=…)            → editor (or slideshow with &play)
  *   2. data embedded in this file      → slideshow (player export) or editor (editable export)
  *   3. the last presentation edited in this browser, or the welcome deck
- * The interface language is chosen first (see i18n.js): this browser's choice, else the one stored in the file. */
+ * The interface language is chosen first (see i18n.js): this browser's choice, else the one stored in the file.
+ * Password-protected links and files (see codec.js) show a password prompt before anything else. */
 (function (PZ) {
   'use strict';
 
@@ -13,11 +14,12 @@
     try { return { j: JSON.parse(node.textContent) }; } catch (e) { return { error: e }; }
   }
 
-  function embedded(raw) {
+  async function embedded(raw) {
     if (!raw) return null;
     try {
       if (raw.error) throw raw.error;
-      return { mode: raw.j.mode === 'editor' ? 'editor' : 'player', doc: PZ.normalizeDoc(raw.j.doc) };
+      const doc = typeof raw.j.enc === 'string' ? await PZ.decodeDoc(raw.j.enc) : PZ.normalizeDoc(raw.j.doc);
+      return { mode: raw.j.mode === 'editor' ? 'editor' : 'player', doc };
     } catch (e) {
       console.error(e);
       PZ.toast(PZ.t('The presentation inside this file is damaged: {msg}', { msg: e.message }), { type: 'error', timeout: 0 });
@@ -44,12 +46,14 @@
     const hasEditor = !!(PZ.ed && PZ.ed.start);
     const raw = embeddedRaw();
     PZ.initLang(raw && raw.j && raw.j.lang);
-    const emb = embedded(raw);
     let linkDoc = null;
     const packed = PZ.readHash();
     if (packed) {
-      try { linkDoc = await PZ.decodeDoc(packed); } catch (e) { PZ.toast(PZ.t('This link is damaged or incomplete ({msg}).', { msg: e.message }), { type: 'error', timeout: 0 }); }
+      // in the app, a cancelled password prompt opens your own presentations instead
+      try { linkDoc = await PZ.decodeDoc(packed, { cancel: hasEditor }); } catch (e) { PZ.toast(PZ.t('This link is damaged or incomplete ({msg}).', { msg: e.message }), { type: 'error', timeout: 0 }); }
+      if (!linkDoc && hasEditor) history.replaceState(null, '', location.pathname + location.search);
     }
+    const emb = linkDoc ? null : await embedded(raw);
 
     if (!hasEditor) {
       const doc = linkDoc || (emb && emb.doc);

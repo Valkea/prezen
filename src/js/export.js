@@ -64,7 +64,11 @@
     PZ.gcAssets(d);
     const sources = await PZ.appSources(mode === 'player');
     const fonts = await fontTags(d, !!opts.embedFonts);
-    const payload = JSON.stringify({ app: 'prezen', v: 1, mode, lang: PZ.lang, doc: d }).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16));
+    // a password-protected doc travels encrypted ("enc": an encrypted pack, see codec.js), title included
+    const locked = !!d.password;
+    const data = { app: 'prezen', v: 1, mode, lang: PZ.lang };
+    if (locked) data.enc = await PZ.lockPacked(await PZ.packJson(d), d.password); else data.doc = d;
+    const payload = JSON.stringify(data).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16));
     const attrs = (s) => `data-pz="${PZ.escapeHtml(s.name)}"${s.player ? ' data-player' : ''}`;
     const css = sources.filter((s) => s.kind === 'css').map((s) => `<style ${attrs(s)}>\n${s.text}\n${END_STYLE}`);
     const js = sources.filter((s) => s.kind === 'js').map((s) => {
@@ -78,7 +82,7 @@
       '<meta charset="utf-8">',
       '<meta name="viewport" content="width=device-width, initial-scale=1">',
       `<meta name="generator" content="PrezEn ${PZ.VERSION}">`,
-      `<title>${PZ.escapeHtml(d.title)}</title>`,
+      `<title>${PZ.escapeHtml(locked ? PZ.APP : d.title)}</title>`,
       '<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%235b5bf0%22/%3E%3Cpath d=%22M9 23V9h8a5 5 0 0 1 0 10h-8%22 fill=%22none%22 stroke=%22white%22 stroke-width=%223%22/%3E%3C/svg%3E">',
       ...fonts,
       ...css,
@@ -92,10 +96,11 @@
     return { html, report, size: html.length };
   };
 
-  /** Plain JSON data file (the editor opens it back). */
-  PZ.buildJson = function (doc) {
+  /** Plain JSON data file (the editor opens it back). Encrypted ({enc}) when the doc has a password. */
+  PZ.buildJson = async function (doc) {
     const d = PZ.clone(doc);
     PZ.gcAssets(d);
+    if (d.password) return JSON.stringify({ app: 'prezen', v: 1, enc: await PZ.lockPacked(await PZ.packJson(d), d.password) });
     return JSON.stringify({ app: 'prezen', v: 1, doc: d }, null, 1);
   };
 })(window.PZ = window.PZ || {});
