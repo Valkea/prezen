@@ -31,11 +31,11 @@
     const kind = packed[0], body = PZ.fromBase64Url(packed.slice(1));
     let bytes;
     if (kind === 'z') {
-      if (typeof DecompressionStream !== 'function') throw new Error('This browser cannot open compressed links');
+      if (typeof DecompressionStream !== 'function') throw new Error(PZ.t('This browser cannot open compressed links'));
       bytes = await pipe(body, new DecompressionStream('deflate-raw'));
     } else if (kind === 'j') bytes = body;
-    else throw new Error('Unknown link format');
-    if (bytes.length > 60 * 1048576) throw new Error('Link too large');
+    else throw new Error(PZ.t('Unknown link format'));
+    if (bytes.length > 60 * 1048576) throw new Error(PZ.t('Link too large'));
     return JSON.parse(new TextDecoder().decode(bytes));
   };
 

@@ -1,12 +1,12 @@
 /* PrezEn · editor: app shell, state, undo/redo, commands, keyboard shortcuts, saving. */
 (function (PZ) {
   'use strict';
-  const h = PZ.h, ui = PZ.ui;
+  const h = PZ.h, ui = PZ.ui, t = PZ.t;
   const MOD = PZ.isMac ? '⌘' : 'Ctrl+';
 
   const E = (PZ.ed = {
     doc: null, cur: 0, sel: [], undoStack: [], redoStack: [], editing: null, clipboard: null,
-    fileHandle: null, fileName: '', mode: 'browser', dirty: false, zoom: 'fit', saveState: '',
+    fileHandle: null, fileName: '', mode: 'browser', dirty: false, zoom: 'fit', saveState: '', isSample: false,
   });
 
   // ---------------------------------------------------------------- state helpers
@@ -40,6 +40,7 @@
 
   E.changed = function (parts) {
     E.doc.updated = Date.now();
+    E.isSample = false;
     E.cur = PZ.clamp(E.cur, 0, E.doc.slides.length - 1);
     E.sel = E.sel.filter((id) => E.find(id));
     E.setDirty(true);
@@ -55,7 +56,7 @@
     restore(u.before);
     E.cur = u.cur; E.sel = u.sel;
     E.changed();
-    PZ.toast('Undo: ' + u.label, { timeout: 1200 });
+    PZ.toast(t('Undo: {label}', { label: t(u.label) }), { timeout: 1200 });
   };
   E.redo = function () {
     const r = E.redoStack.pop();
@@ -98,14 +99,14 @@
   // ---------------------------------------------------------------- saving
   E.setDirty = function (v) {
     E.dirty = v;
-    E.saveState = v ? (E.mode === 'file' ? 'Unsaved changes' : 'Saving…') : (E.mode === 'file' ? 'Saved to file' : 'Saved in this browser');
+    E.saveState = v ? (E.mode === 'file' ? t('Unsaved changes') : t('Saving…')) : (E.mode === 'file' ? t('Saved to file') : t('Saved in this browser'));
     renderStatus();
   };
   const autosave = PZ.debounce(async () => {
     try {
       await PZ.store.put(E.doc);
       if (E.mode !== 'file') E.setDirty(false);
-    } catch (e) { E.saveState = 'Not saved: browser storage unavailable'; renderStatus(); }
+    } catch (e) { E.saveState = t('Not saved: browser storage unavailable'); renderStatus(); }
   }, 700);
   E.autosave = autosave;
 
@@ -122,9 +123,9 @@
       try {
         await PZ.files.write(E.fileHandle, await fileBlob(E.fileHandle.name));
         E.mode = 'file'; E.setDirty(false);
-        PZ.toast('Saved to ' + E.fileHandle.name, { timeout: 1600 });
+        PZ.toast(t('Saved to {name}', { name: E.fileHandle.name }), { timeout: 1600 });
         return;
-      } catch (e) { PZ.toast('Could not write the file: ' + e.message, { type: 'error' }); }
+      } catch (e) { PZ.toast(t('Could not write the file: {msg}', { msg: e.message }), { type: 'error' }); }
     }
     return E.saveAs();
   };
@@ -134,8 +135,8 @@
       const name = PZ.safeFileName(E.doc.title, kind === 'json' ? '.json' : '.html');
       const handle = await PZ.files.saveAs(await fileBlob(name), name, kind === 'json' ? 'json' : 'html');
       if (handle === 'cancel') return;
-      if (handle) { E.fileHandle = handle; E.fileName = handle.name; E.mode = 'file'; E.setDirty(false); PZ.toast('Saved. Next saves (' + MOD + 'S) update this file.'); }
-      else PZ.toast(kind === 'json' ? 'Data file downloaded.' : 'Downloaded an editable copy: open it in any browser to present or edit it.');
+      if (handle) { E.fileHandle = handle; E.fileName = handle.name; E.mode = 'file'; E.setDirty(false); PZ.toast(t('Saved. Next saves ({key}) update this file.', { key: MOD + 'S' })); }
+      else PZ.toast(kind === 'json' ? t('Data file downloaded.') : t('Downloaded an editable copy: open it in any browser to present or edit it.'));
     } catch (e) { PZ.toast(e.message, { type: 'error', timeout: 8000 }); }
   };
 
@@ -144,15 +145,15 @@
       const r = await PZ.files.open();
       if (!r) return;
       E.load(r.doc, { mode: r.handle ? 'file' : 'browser', handle: r.handle, name: r.name });
-      PZ.toast('Opened ' + r.name);
-    } catch (e) { PZ.toast('Cannot open this file: ' + e.message, { type: 'error', timeout: 7000 }); }
+      PZ.toast(t('Opened {name}', { name: r.name }));
+    } catch (e) { PZ.toast(t('Cannot open this file: {msg}', { msg: e.message }), { type: 'error', timeout: 7000 }); }
   };
 
   E.load = function (doc, o) {
     o = o || {};
     if (E.editing) PZ.edStage.endEdit();
     E.doc = doc; E.cur = 0; E.sel = []; E.undoStack = []; E.redoStack = [];
-    E.fileHandle = o.handle || null; E.fileName = o.name || ''; E.mode = o.mode || 'browser';
+    E.fileHandle = o.handle || null; E.fileName = o.name || ''; E.mode = o.mode || 'browser'; E.isSample = !!o.sample;
     PZ.loadFonts(doc);
     document.title = doc.title + ' · PrezEn';
     E.setDirty(false);
@@ -170,7 +171,7 @@
   }
   E.insertText = function (o) {
     const d = E.doc;
-    const el = PZ.make.text(d, Object.assign(center(d.w * 0.5, d.h * 0.1), { html: 'Your text', style: { size: Math.round(d.h * 0.045) } }, o));
+    const el = PZ.make.text(d, Object.assign(center(d.w * 0.5, d.h * 0.1), { html: t('Your text'), style: { size: Math.round(d.h * 0.045) } }, o));
     insert(el, 'Add text');
     setTimeout(() => PZ.edStage.startEdit(el.id, true), 30);
   };
@@ -213,7 +214,7 @@
   };
   E.deleteSlide = function (i) {
     i = i == null ? E.cur : i;
-    if (E.doc.slides.length < 2) { PZ.toast('A presentation needs at least one slide.'); return; }
+    if (E.doc.slides.length < 2) { PZ.toast(t('A presentation needs at least one slide.')); return; }
     E.commit('Delete slide', (d) => d.slides.splice(i, 1));
     E.goSlide(Math.min(i, E.doc.slides.length - 1));
     E.refresh('slides');
@@ -317,10 +318,10 @@
   };
 
   E.setTitle = function (t) {
-    t = String(t || '').trim().slice(0, 200) || 'Untitled presentation';
-    if (t === E.doc.title) return;
-    E.commit('Rename', (d) => { d.title = t; }, { refresh: 'status' });
-    document.title = t + ' · PrezEn';
+    const title = String(t || '').trim().slice(0, 200) || PZ.t('Untitled presentation');
+    if (title === E.doc.title) return;
+    E.commit('Rename', (d) => { d.title = title; }, { refresh: 'status' });
+    document.title = title + ' · PrezEn';
   };
 
   E.newDoc = function (aspect) {
@@ -329,18 +330,43 @@
     history.replaceState(null, '', location.pathname + location.search);
   };
 
+  // ---------------------------------------------------------------- language
+  /** Switch the interface language: remembered in this browser and written into the next saved / exported file. */
+  E.setLang = function (lang) {
+    if (lang === PZ.lang) return;
+    const stored = PZ.setLang(lang);
+    if (E.isSample && !E.undoStack.length) E.load(PZ.sampleDoc(), { noSave: true, sample: true }); // untouched welcome deck: show it in the new language
+    E.rebuild();
+    if (!stored && E.mode === 'file') { E.setDirty(true); PZ.toast(t('This browser cannot remember the language here: save the file ({key}) to keep it.', { key: MOD + 'S' }), { timeout: 7000 }); }
+  };
+  function langMenu(anchor, o) {
+    ui.menu(anchor, Object.keys(PZ.LANGS).map((l) => ({ label: PZ.LANGS[l], icon: l === PZ.lang ? 'check' : null, run: () => E.setLang(l) })), o);
+  }
+
+  /** Rebuild the whole editor UI (after a language change). The document, selection and history are kept. */
+  E.rebuild = function () {
+    const root = PZ.$('.ed');
+    if (!root) return;
+    if (E.editing) PZ.edStage.endEdit();
+    root.textContent = '';
+    build(root);
+    E.setDirty(E.dirty);
+    E.refresh();
+  };
+
   // ---------------------------------------------------------------- layout
   let statusEl, titleInput, undoBtn, redoBtn;
   function renderStatus() {
     if (!statusEl) return;
     statusEl.textContent = '';
     statusEl.append(...[
-      h('span', { text: `Slide ${E.cur + 1} of ${E.doc.slides.length}` }),
+      h('span', { text: t('Slide {n} of {total}', { n: E.cur + 1, total: E.doc.slides.length }) }),
       h('span', { class: 'ed-st-sep' }),
       h('span', { text: `${E.doc.w}×${E.doc.h}` }),
       h('span', { class: 'ed-grow' }),
-      E.fileName ? h('span', { class: 'ed-st-file', title: 'Ctrl+S writes to this file', text: E.fileName }) : null,
+      E.fileName ? h('span', { class: 'ed-st-file', title: t('{key} writes to this file', { key: MOD + 'S' }), text: E.fileName }) : null,
       h('span', { class: 'ed-st-save' + (E.dirty && E.mode === 'file' ? ' ed-warn' : ''), text: E.saveState }),
+      h('button', { class: 'ed-st-lang', title: t('Language'), text: PZ.lang.toUpperCase(), onClick: (e) => langMenu(e.currentTarget, { align: 'right' }) }),
       PZ.edStage.zoomControl(),
     ].filter(Boolean));
     if (titleInput && document.activeElement !== titleInput) titleInput.value = E.doc.title;
@@ -350,21 +376,22 @@
 
   function fileMenu(anchor) {
     ui.menu(anchor, [
-      { label: 'New presentation…', icon: 'file-plus', run: () => PZ.edDialogs.newDoc() },
-      { label: 'Open file…', icon: 'folder-open', kbd: MOD + 'O', run: () => E.openFile() },
-      { label: 'My presentations (this browser)', icon: 'library', run: () => PZ.edDialogs.library() },
+      { label: t('New presentation…'), icon: 'file-plus', run: () => PZ.edDialogs.newDoc() },
+      { label: t('Open file…'), icon: 'folder-open', kbd: MOD + 'O', run: () => E.openFile() },
+      { label: t('My presentations (this browser)'), icon: 'library', run: () => PZ.edDialogs.library() },
       '-',
-      { label: E.fileHandle ? 'Save to ' + E.fileHandle.name : 'Save as editable file…', icon: 'save', kbd: MOD + 'S', run: () => E.save() },
-      { label: 'Save a copy as…', icon: 'copy', run: () => E.saveAs() },
-      { label: 'Save data only (.json)', icon: 'download', run: () => E.saveAs('json') },
+      { label: E.fileHandle ? t('Save to {name}', { name: E.fileHandle.name }) : t('Save as editable file…'), icon: 'save', kbd: MOD + 'S', run: () => E.save() },
+      { label: t('Save a copy as…'), icon: 'copy', run: () => E.saveAs() },
+      { label: t('Save data only (.json)'), icon: 'download', run: () => E.saveAs('json') },
       '-',
-      { label: 'Export…', icon: 'upload', run: () => PZ.edDialogs.exportDlg() },
-      { label: 'Print / PDF', icon: 'pdf', kbd: MOD + 'P', run: () => PZ.printDoc(E.doc) },
-      { label: 'Share link…', icon: 'link', run: () => PZ.edDialogs.share() },
+      { label: t('Export…'), icon: 'upload', run: () => PZ.edDialogs.exportDlg() },
+      { label: t('Print / PDF'), icon: 'pdf', kbd: MOD + 'P', run: () => PZ.printDoc(E.doc) },
+      { label: t('Share link…'), icon: 'link', run: () => PZ.edDialogs.share() },
       '-',
-      { label: 'Page size & theme…', icon: 'sliders', run: () => PZ.edDialogs.pageSetup() },
-      { label: 'Keyboard shortcuts', icon: 'keyboard', kbd: '?', run: () => PZ.edDialogs.shortcuts() },
-      { label: 'About PrezEn & privacy', icon: 'info', run: () => PZ.edDialogs.about() },
+      { label: t('Page size & theme…'), icon: 'sliders', run: () => PZ.edDialogs.pageSetup() },
+      { label: t('Language: {name}', { name: PZ.LANGS[PZ.lang] }), icon: 'globe', run: () => langMenu(anchor) },
+      { label: t('Keyboard shortcuts'), icon: 'keyboard', kbd: '?', run: () => PZ.edDialogs.shortcuts() },
+      { label: t('About PrezEn & privacy'), icon: 'info', run: () => PZ.edDialogs.about() },
     ]);
   }
 
@@ -372,40 +399,41 @@
     const grid = h('div', { class: 'ed-shape-grid' });
     for (const [kind, def] of Object.entries(PZ.SHAPES)) {
       const prev = PZ.shapeSvg({ id: 'p' + kind, shape: kind, w: 44, h: def.line ? 20 : 34, fill: '#7c8cff', stroke: def.line ? '#7c8cff' : '', sw: def.line ? 3 : 0, radius: 6 });
-      grid.appendChild(h('button', { class: 'ed-shape-btn', title: def.name, onClick: () => { pop.close(); E.insertShape(kind); } }, prev));
+      grid.appendChild(h('button', { class: 'ed-shape-btn', title: t(def.name), onClick: () => { pop.close(); E.insertShape(kind); } }, prev));
     }
-    const pop = ui.popover(anchor, h('div', { class: 'ed-pop-pad' }, h('div', { class: 'ui-menu-head', text: 'Shapes' }), grid));
+    const pop = ui.popover(anchor, h('div', { class: 'ed-pop-pad' }, h('div', { class: 'ui-menu-head', text: t('Shapes') }), grid));
   }
 
   function build(root) {
     const tb = (icon, label, run, o) => h('button', { class: 'ed-tb' + (o && o.cls ? ' ' + o.cls : ''), title: (o && o.title) || label, onClick: (e) => run(e.currentTarget) }, PZ.icon(icon), label ? h('span', { class: 'ed-tb-label', text: label }) : null);
-    titleInput = h('input', { class: 'ed-title', value: E.doc.title, 'aria-label': 'Presentation title', spellcheck: 'false',
+    document.documentElement.style.setProperty('--pz-ph-text', JSON.stringify(t('Type your text'))); // empty text box placeholder (CSS)
+    titleInput = h('input', { class: 'ed-title', value: E.doc.title, 'aria-label': t('Presentation title'), spellcheck: 'false',
       onChange: () => E.setTitle(titleInput.value), onKeydown: (e) => { if (e.key === 'Enter') titleInput.blur(); } });
-    undoBtn = tb('undo', '', () => E.undo(), { title: 'Undo (' + MOD + 'Z)' });
-    redoBtn = tb('redo', '', () => E.redo(), { title: 'Redo (' + MOD + 'Shift+Z)' });
+    undoBtn = tb('undo', '', () => E.undo(), { title: t('Undo ({key})', { key: MOD + 'Z' }) });
+    redoBtn = tb('redo', '', () => E.redo(), { title: t('Redo ({key})', { key: MOD + 'Shift+Z' }) });
     const top = h('header', { class: 'ed-top' },
-      h('button', { class: 'ed-brand', title: 'Menu', onClick: (e) => fileMenu(e.currentTarget) }, h('span', { class: 'ed-logo' }, 'P'), h('span', { class: 'ed-brand-name', text: 'PrezEn' }), PZ.icon('chevron-down')),
+      h('button', { class: 'ed-brand', title: t('Menu'), onClick: (e) => fileMenu(e.currentTarget) }, h('span', { class: 'ed-logo' }, 'P'), h('span', { class: 'ed-brand-name', text: 'PrezEn' }), PZ.icon('chevron-down')),
       titleInput,
       h('div', { class: 'ed-tb-group' }, undoBtn, redoBtn),
       h('div', { class: 'ed-tb-group' },
-        tb('type', 'Text', () => E.insertText(), { title: 'Add text (T)' }),
-        tb('image', 'Image', () => PZ.edDialogs.image({ onPick: (ref) => E.insertImage(ref) }), { title: 'Add image (I)' }),
-        tb('shapes', 'Shapes', (a) => shapesMenu(a)),
-        tb('star', 'Icons', () => PZ.edDialogs.icons({ onPick: (svg, name) => E.insertIcon(svg, name) })),
-        tb('sparkles', 'Transitions', () => PZ.edStudio.open(), { title: 'Transition & animation studio' })),
+        tb('type', t('Text'), () => E.insertText(), { title: t('Add text (T)') }),
+        tb('image', t('Image'), () => PZ.edDialogs.image({ onPick: (ref) => E.insertImage(ref) }), { title: t('Add image (I)') }),
+        tb('shapes', t('Shapes'), (a) => shapesMenu(a)),
+        tb('star', t('Icons'), () => PZ.edDialogs.icons({ onPick: (svg, name) => E.insertIcon(svg, name) })),
+        tb('sparkles', t('Transitions'), () => PZ.edStudio.open(), { title: t('Transition & animation studio') })),
       h('div', { class: 'ed-grow' }),
       h('div', { class: 'ed-tb-group' },
-        tb('library', '', () => PZ.edDialogs.library(), { title: 'My presentations' }),
-        tb('share', 'Share', () => PZ.edDialogs.share()),
-        tb('download', 'Export', () => PZ.edDialogs.exportDlg()),
-        h('button', { class: 'ed-present', title: 'Present from the start (F5) · Shift: from this slide', onClick: (e) => E.present(e.shiftKey) }, PZ.icon('play'), h('span', { text: 'Present' })),
-        h('button', { class: 'ed-present-more', title: 'Present options', onClick: (e) => ui.menu(e.currentTarget, [
-          { label: 'From the beginning', icon: 'play', kbd: 'F5', run: () => E.present(false) },
-          { label: 'From this slide', icon: 'play', kbd: 'Shift+F5', run: () => E.present(true) },
+        tb('library', '', () => PZ.edDialogs.library(), { title: t('My presentations') }),
+        tb('share', t('Share'), () => PZ.edDialogs.share()),
+        tb('download', t('Export'), () => PZ.edDialogs.exportDlg()),
+        h('button', { class: 'ed-present', title: t('Present from the start (F5) · Shift: from this slide'), onClick: (e) => E.present(e.shiftKey) }, PZ.icon('play'), h('span', { text: t('Present') })),
+        h('button', { class: 'ed-present-more', title: t('Present options'), onClick: (e) => ui.menu(e.currentTarget, [
+          { label: t('From the beginning'), icon: 'play', kbd: 'F5', run: () => E.present(false) },
+          { label: t('From this slide'), icon: 'play', kbd: t('Shift+F5'), run: () => E.present(true) },
         ], { align: 'right' }) }, PZ.icon('chevron-down'))));
-    const slidesPane = h('aside', { class: 'ed-slides', 'aria-label': 'Slides' });
-    const canvas = h('main', { class: 'ed-canvas', 'aria-label': 'Slide editor' });
-    const insp = h('aside', { class: 'ed-inspector', 'aria-label': 'Properties' });
+    const slidesPane = h('aside', { class: 'ed-slides', 'aria-label': t('Slides') });
+    const canvas = h('main', { class: 'ed-canvas', 'aria-label': t('Slide editor') });
+    const insp = h('aside', { class: 'ed-inspector', 'aria-label': t('Properties') });
     statusEl = h('footer', { class: 'ed-status' });
     root.append(top, h('div', { class: 'ed-main' }, slidesPane, canvas, insp), statusEl);
     PZ.edSlides.mount(slidesPane);
@@ -468,9 +496,9 @@
     if (clip && clip.text && text === clip.text) { e.preventDefault(); E.paste(); return; }
     if (!text) { if (E.paste()) e.preventDefault(); return; }
     e.preventDefault();
-    const t = text.trim();
-    if (/^(https?:\/\/\S+\.(png|jpe?g|gif|webp|svg|avif)(\?\S*)?|https?:\/\/drive\.google\.com\/\S+|s3:\/\/\S+)$/i.test(t)) E.insertImage(t);
-    else E.insertText({ html: PZ.escapeHtml(t).replace(/\n/g, '<br>') });
+    const txt = text.trim();
+    if (/^(https?:\/\/\S+\.(png|jpe?g|gif|webp|svg|avif)(\?\S*)?|https?:\/\/drive\.google\.com\/\S+|s3:\/\/\S+)$/i.test(txt)) E.insertImage(txt);
+    else E.insertText({ html: PZ.escapeHtml(txt).replace(/\n/g, '<br>') });
   }
 
   /** Start the editor in a root element with a doc. */
@@ -482,7 +510,7 @@
     document.body.appendChild(root);
     document.body.classList.add('pz-editor-body');
     build(root);
-    E.load(doc, { mode: E.mode, noSave: opts.noSave });
+    E.load(doc, { mode: E.mode, noSave: opts.noSave, sample: opts.sample });
     window.addEventListener('keydown', onKey);
     document.addEventListener('paste', onPaste);
     // copy / cut put a marker in the system clipboard, so paste can tell our elements from text copied elsewhere
@@ -498,6 +526,6 @@
     document.addEventListener('copy', onCopy(false));
     document.addEventListener('cut', onCopy(true));
     window.addEventListener('beforeunload', (e) => { if (E.dirty && E.mode === 'file') { e.preventDefault(); e.returnValue = ''; } else autosave.flush(); });
-    if (PZ.storageFallback) PZ.toast('Browser storage is unavailable here: save your work to a file.', { type: 'warn', timeout: 8000 });
+    if (PZ.storageFallback) PZ.toast(t('Browser storage is unavailable here: save your work to a file.'), { type: 'warn', timeout: 8000 });
   };
 })(window.PZ = window.PZ || {});

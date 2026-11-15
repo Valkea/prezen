@@ -59,6 +59,7 @@ body.pz-player-body { margin: 0; background: #000; overflow: hidden; }
 .pz-pbtn { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; color: #fff; }
 .pz-pbtn:hover, .pz-pbtn:focus-visible { background: rgba(255, 255, 255, 0.14); }
 .pz-pbtn .pz-ico { width: 20px; height: 20px; }
+.pz-pbtn.pz-lang { font: 700 12px/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: 0.04em; }
 .pz-counter { min-width: 64px; text-align: center; font: 600 14px/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .pz-sep { width: 1px; height: 22px; background: rgba(255, 255, 255, 0.2); margin: 0 4px; }
 

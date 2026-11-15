@@ -75,7 +75,7 @@
       box.style.borderRadius = el.radius + 'px';
       if (el.bw) box.style.border = `${el.bw}px solid ${PZ.color(el.bc, '#fff')}`;
       if (sh && sh.box) box.style.boxShadow = sh.box;
-      if (!el.src) missing(box, 'Double-click to add a picture', mode);
+      if (!el.src) missing(box, PZ.t('Double-click to add a picture'), mode);
       else {
         const img = h('img', { alt: el.alt || '', draggable: 'false' });
         img.style.objectFit = el.fit;
@@ -83,7 +83,7 @@
         if (el.flip) img.style.transform = 'scaleX(-1)';
         const fl = filters(el.filters);
         if (fl) img.style.filter = fl;
-        PZ.setImgSrc(img, el.src, doc, (ref) => { img.remove(); missing(box, 'Image not found: ' + ref.slice(0, 80), mode); });
+        PZ.setImgSrc(img, el.src, doc, (ref) => { img.remove(); missing(box, PZ.t('Image not found: {ref}', { ref: ref.slice(0, 80) }), mode); });
         box.appendChild(img);
       }
       body.appendChild(box);

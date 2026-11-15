@@ -132,7 +132,7 @@
   PZ.imageFileToDataUrl = async function (file, opts) {
     opts = opts || {};
     const maxDim = opts.maxDim || 2400;
-    if (!/^image\//.test(file.type)) throw new Error('Not an image');
+    if (!/^image\//.test(file.type)) throw new Error(PZ.t('Not an image'));
     const raw = await PZ.readFile(file, 'dataURL');
     if (opts.optimize === false || /svg|gif/.test(file.type)) return raw;
     const img = new Image();

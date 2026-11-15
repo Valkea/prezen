@@ -15,7 +15,7 @@
       if (playerOnly && !node.hasAttribute('data-player')) continue;
       let text;
       try { text = await PZ.sourceText(node); } catch (e) {
-        throw new Error('Cannot read the app files from a local folder. Use the single-file build (dist/PrezEn.html) or run “npm run dev”.');
+        throw new Error(PZ.t('Cannot read the app files from a local folder. Use the single-file build (dist/PrezEn.html) or run “npm run dev”.'));
       }
       out.push({ kind: node.tagName === 'SCRIPT' ? 'js' : 'css', name: node.getAttribute('data-pz'), player: node.hasAttribute('data-player'), text });
     }
@@ -64,7 +64,7 @@
     PZ.gcAssets(d);
     const sources = await PZ.appSources(mode === 'player');
     const fonts = await fontTags(d, !!opts.embedFonts);
-    const payload = JSON.stringify({ app: 'prezen', v: 1, mode, doc: d }).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16));
+    const payload = JSON.stringify({ app: 'prezen', v: 1, mode, lang: PZ.lang, doc: d }).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16));
     const attrs = (s) => `data-pz="${PZ.escapeHtml(s.name)}"${s.player ? ' data-player' : ''}`;
     const css = sources.filter((s) => s.kind === 'css').map((s) => `<style ${attrs(s)}>\n${s.text}\n${END_STYLE}`);
     const js = sources.filter((s) => s.kind === 'js').map((s) => {
@@ -73,7 +73,7 @@
     });
     const html = [
       '<!doctype html>',
-      '<html lang="en">',
+      `<html lang="${PZ.lang}">`,
       '<head>',
       '<meta charset="utf-8">',
       '<meta name="viewport" content="width=device-width, initial-scale=1">',

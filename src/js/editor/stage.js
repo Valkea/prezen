@@ -1,9 +1,9 @@
 /* PrezEn · editor/stage: the slide canvas. Select, move (with snapping), resize, rotate, edit text in place. */
 (function (PZ) {
   'use strict';
-  const h = PZ.h, E = PZ.ed;
+  const h = PZ.h, E = PZ.ed, t = PZ.t;
   const S = (PZ.edStage = {});
-  let canvas, stage, host, overlay, k = 0.5;
+  let canvas, stage, host, overlay, k = 0.5, resizeObs = null, globalsBound = false;
   const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
   const DIRS = { nw: [-1, -1], n: [0, -1], ne: [1, -1], e: [1, 0], se: [1, 1], s: [0, 1], sw: [-1, 1], w: [-1, 0] };
 
@@ -25,7 +25,11 @@
     canvas.addEventListener('dragover', (e) => { e.preventDefault(); canvas.classList.add('ed-drop'); });
     canvas.addEventListener('dragleave', () => canvas.classList.remove('ed-drop'));
     canvas.addEventListener('drop', onDrop);
-    new ResizeObserver(() => { if (E.zoom === 'fit') layout(); }).observe(canvas);
+    if (resizeObs) resizeObs.disconnect(); // mount runs again when the UI is rebuilt (language change)
+    resizeObs = new ResizeObserver(() => { if (E.zoom === 'fit') layout(); });
+    resizeObs.observe(canvas);
+    if (globalsBound) return;
+    globalsBound = true;
     document.addEventListener('selectionchange', () => {
       const ed = E.editing;
       const sel = window.getSelection();
@@ -53,10 +57,10 @@
 
   S.setZoom = function (z) { E.zoom = z; layout(); };
   S.zoomControl = function () {
-    const pct = h('button', { class: 'ed-zoom-pct', title: 'Fit to window', text: (E.zoom === 'fit' ? 'Fit · ' : '') + Math.round(k * 100) + '%', onClick: () => S.setZoom('fit') });
+    const pct = h('button', { class: 'ed-zoom-pct', title: t('Fit to window'), text: (E.zoom === 'fit' ? t('Fit') + ' · ' : '') + Math.round(k * 100) + '%', onClick: () => S.setZoom('fit') });
     return h('span', { class: 'ed-zoom' },
-      h('button', { class: 'ed-zoom-btn', title: 'Zoom out (Ctrl+wheel)', text: '−', onClick: () => S.setZoom(PZ.clamp(k / 1.25, 0.1, 4)) }), pct,
-      h('button', { class: 'ed-zoom-btn', title: 'Zoom in (Ctrl+wheel)', text: '+', onClick: () => S.setZoom(PZ.clamp(k * 1.25, 0.1, 4)) }));
+      h('button', { class: 'ed-zoom-btn', title: t('Zoom out (Ctrl+wheel)'), text: '−', onClick: () => S.setZoom(PZ.clamp(k / 1.25, 0.1, 4)) }), pct,
+      h('button', { class: 'ed-zoom-btn', title: t('Zoom in (Ctrl+wheel)'), text: '+', onClick: () => S.setZoom(PZ.clamp(k * 1.25, 0.1, 4)) }));
   };
 
   /** Re-render the current slide. */
@@ -108,11 +112,11 @@
           if (el.type === 'text' && el.autoH && (hd === 'n' || hd === 's')) continue;
           f.appendChild(h('div', { class: 'ed-h ed-h-' + hd, dataset: { handle: hd } }));
         }
-        f.appendChild(h('div', { class: 'ed-rot', dataset: { handle: 'rot' }, title: 'Rotate (Shift: 15° steps)' }));
+        f.appendChild(h('div', { class: 'ed-rot', dataset: { handle: 'rot' }, title: t('Rotate (Shift: 15° steps)') }));
         f.appendChild(h('div', { class: 'ed-size-tag', text: `${Math.round(el.w)} × ${Math.round(el.h)}${el.rot ? ' · ' + Math.round(el.rot) + '°' : ''}` }));
       }
       if (el.locked) f.appendChild(h('div', { class: 'ed-lock-tag' }, PZ.icon('lock')));
-      if (el.anim) f.appendChild(h('div', { class: 'ed-anim-tag', title: 'Animated' }, PZ.icon('sparkles')));
+      if (el.anim) f.appendChild(h('div', { class: 'ed-anim-tag', title: t('Animated') }, PZ.icon('sparkles')));
       overlay.appendChild(f);
     }
     if (els.length > 1) {
@@ -312,7 +316,7 @@
     }
     if (el.locked) return;
     if (el.type === 'text' || el.type === 'shape') S.startEdit(el.id, false, e);
-    else if (el.type === 'image') PZ.edDialogs.image({ title: 'Replace image', onPick: (ref) => E.update('Replace image', () => { el.src = ref; }) });
+    else if (el.type === 'image') PZ.edDialogs.image({ title: t('Replace image'), onPick: (ref) => E.update('Replace image', () => { el.src = ref; }) });
     else if (el.type === 'icon') PZ.edDialogs.icons({ onPick: (svg, name) => E.update('Replace icon', () => { el.svg = svg; el.name = name; }) });
   }
 
@@ -325,23 +329,23 @@
     const has = E.sel.length > 0;
     const one = E.one();
     PZ.ui.menu(stage, [
-      has ? { label: 'Cut', icon: 'x', kbd: 'Ctrl+X', run: () => E.cutSel() } : null,
-      has ? { label: 'Copy', icon: 'copy', kbd: 'Ctrl+C', run: () => E.copySel() } : null,
-      { label: 'Paste', icon: 'file-text', kbd: 'Ctrl+V', run: () => E.paste() },
-      has ? { label: 'Duplicate', icon: 'copy', kbd: 'Ctrl+D', run: () => E.duplicateSel() } : null,
+      has ? { label: t('Cut'), icon: 'x', kbd: 'Ctrl+X', run: () => E.cutSel() } : null,
+      has ? { label: t('Copy'), icon: 'copy', kbd: 'Ctrl+C', run: () => E.copySel() } : null,
+      { label: t('Paste'), icon: 'file-text', kbd: 'Ctrl+V', run: () => E.paste() },
+      has ? { label: t('Duplicate'), icon: 'copy', kbd: 'Ctrl+D', run: () => E.duplicateSel() } : null,
       has ? '-' : null,
-      has ? { label: 'Bring to front', icon: 'bring-front', kbd: 'Ctrl+Shift+]', run: () => E.zorder('front') } : null,
-      has ? { label: 'Bring forward', icon: 'chevron-up', kbd: 'Ctrl+]', run: () => E.zorder('forward') } : null,
-      has ? { label: 'Send backward', icon: 'chevron-down', kbd: 'Ctrl+[', run: () => E.zorder('backward') } : null,
-      has ? { label: 'Send to back', icon: 'send-back', kbd: 'Ctrl+Shift+[', run: () => E.zorder('back') } : null,
+      has ? { label: t('Bring to front'), icon: 'bring-front', kbd: t('Ctrl+Shift+]'), run: () => E.zorder('front') } : null,
+      has ? { label: t('Bring forward'), icon: 'chevron-up', kbd: 'Ctrl+]', run: () => E.zorder('forward') } : null,
+      has ? { label: t('Send backward'), icon: 'chevron-down', kbd: 'Ctrl+[', run: () => E.zorder('backward') } : null,
+      has ? { label: t('Send to back'), icon: 'send-back', kbd: t('Ctrl+Shift+['), run: () => E.zorder('back') } : null,
       one ? '-' : null,
-      one ? { label: one.locked ? 'Unlock' : 'Lock', icon: one.locked ? 'unlock' : 'lock', run: () => E.commit(one.locked ? 'Unlock' : 'Lock', () => { one.locked = !one.locked; }) } : null,
-      one && (one.type === 'text' || one.type === 'shape') ? { label: 'Edit text', icon: 'type', kbd: 'Enter', run: () => S.startEdit(one.id, true) } : null,
+      one ? { label: one.locked ? t('Unlock') : t('Lock'), icon: one.locked ? 'unlock' : 'lock', run: () => E.commit(one.locked ? 'Unlock' : 'Lock', () => { one.locked = !one.locked; }) } : null,
+      one && (one.type === 'text' || one.type === 'shape') ? { label: t('Edit text'), icon: 'type', kbd: t('Enter'), run: () => S.startEdit(one.id, true) } : null,
       has ? '-' : null,
-      has ? { label: 'Delete', icon: 'trash', kbd: 'Del', danger: true, run: () => E.deleteSel() } : null,
+      has ? { label: t('Delete'), icon: 'trash', kbd: t('Del'), danger: true, run: () => E.deleteSel() } : null,
       !has ? '-' : null,
-      !has ? { label: 'Add text here', icon: 'type', run: () => { const p = toLogical(e); E.insertText({ x: Math.round(p.x), y: Math.round(p.y) }); } } : null,
-      !has ? { label: 'Slide background…', icon: 'image', run: () => PZ.edInspector.render() } : null,
+      !has ? { label: t('Add text here'), icon: 'type', run: () => { const p = toLogical(e); E.insertText({ x: Math.round(p.x), y: Math.round(p.y) }); } } : null,
+      !has ? { label: t('Slide background…'), icon: 'image', run: () => PZ.edInspector.render() } : null,
     ], { at });
   }
 
@@ -354,8 +358,8 @@
     if (pres) {
       try {
         const doc = PZ.parseFileText(await pres.text());
-        if (await PZ.ui.confirm('Open presentation', `Open “${doc.title}” from ${pres.name}? The current presentation stays in your browser library.`, 'Open')) E.load(doc);
-      } catch (err) { PZ.toast('Cannot open this file: ' + err.message, { type: 'error' }); }
+        if (await PZ.ui.confirm(t('Open presentation'), t('Open “{title}” from {file}? The current presentation stays in your browser library.', { title: doc.title, file: pres.name }), t('Open'))) E.load(doc);
+      } catch (err) { PZ.toast(t('Cannot open this file: {msg}', { msg: err.message }), { type: 'error' }); }
       return;
     }
     const imgs = files.filter((f) => /^image\//.test(f.type));

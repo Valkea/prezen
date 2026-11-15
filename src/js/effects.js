@@ -100,6 +100,8 @@
     return out;
   };
   PZ.getEffect = (doc, id) => (doc && doc.effects && doc.effects[id]) || L[id] || null;
+  /** Display name: built-in names are translated, custom ones are the author's own text. */
+  PZ.fxName = (e) => (!e ? '' : e.builtin ? PZ.t(e.name) : e.name);
 
   // ---------------------------------------------------------------- validation of custom effects
   const CLIP_RE = /^(inset|circle|ellipse|polygon)\([\d\s.,%a-z-]{0,400}\)$/i;

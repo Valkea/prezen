@@ -2,7 +2,7 @@
  * keyboard / clicker / touch navigation and a presenter window (notes, next slide, timer). */
 (function (PZ) {
   'use strict';
-  const h = PZ.h;
+  const h = PZ.h, t = PZ.t;
 
   /** Group a slide's animated elements into click steps with start times. */
   PZ.buildSteps = function (doc, slide) {
@@ -55,15 +55,8 @@
       this.curtain = h('div', { class: 'pz-curtain' });
       this.progress = h('div', { class: 'pz-progress' }, h('div', { class: 'pz-progress-bar' }));
       this.counter = h('span', { class: 'pz-counter' });
-      const btn = (icon, title, fn, cls) => h('button', { class: 'pz-pbtn' + (cls ? ' ' + cls : ''), title, 'aria-label': title, onClick: (e) => { e.stopPropagation(); fn(); } }, PZ.icon(icon));
-      this.controls = h('div', { class: 'pz-controls' },
-        btn('chevron-left', 'Previous (←)', () => this.prev()), this.counter, btn('chevron-right', 'Next (→, space)', () => this.next()),
-        h('span', { class: 'pz-sep' }),
-        btn('grid', 'Overview (O)', () => this.toggleOverview()),
-        btn('notes', 'Presenter view (S)', () => this.openPresenter()),
-        btn('maximize', 'Full screen (F)', () => this.toggleFullscreen()),
-        this.opts.allowPrint ? btn('pdf', 'Print / save as PDF (P)', () => PZ.printDoc(this.doc)) : null,
-        this.opts.onExit ? btn('exit', 'Exit (Esc)', () => this.exit()) : null);
+      this.controls = h('div', { class: 'pz-controls' });
+      this.buildControls();
       this.root.append(this.viewport, this.curtain, this.progress, this.controls);
       (this.opts.container || document.body).appendChild(this.root);
       PZ.loadFonts(doc);
@@ -93,6 +86,25 @@
       this.go(this.posOf(this.opts.start || 0), { instant: true });
       this.root.focus();
       this.poke();
+    }
+
+    /** Control bar (rebuilt when the language changes). */
+    buildControls() {
+      const btn = (icon, title, fn, cls) => h('button', { class: 'pz-pbtn' + (cls ? ' ' + cls : ''), title, 'aria-label': title, onClick: (e) => { e.stopPropagation(); fn(); } }, PZ.icon(icon));
+      const langs = Object.keys(PZ.LANGS);
+      this.controls.textContent = '';
+      this.controls.append(...[
+        btn('chevron-left', t('Previous (←)'), () => this.prev()), this.counter, btn('chevron-right', t('Next (→, space)'), () => this.next()),
+        h('span', { class: 'pz-sep' }),
+        btn('grid', t('Overview (O)'), () => this.toggleOverview()),
+        btn('notes', t('Presenter view (S)'), () => this.openPresenter()),
+        btn('maximize', t('Full screen (F)'), () => this.toggleFullscreen()),
+        this.opts.allowPrint ? btn('pdf', t('Print / save as PDF (P)'), () => PZ.printDoc(this.doc)) : null,
+        // standalone slideshows get a language switch (the editor has its own)
+        this.opts.langSwitch && langs.length > 1 ? h('button', { class: 'pz-pbtn pz-lang', title: t('Language') + ' · ' + PZ.LANGS[PZ.lang], 'aria-label': t('Language'), text: PZ.lang.toUpperCase(),
+          onClick: (e) => { e.stopPropagation(); PZ.setLang(langs[(langs.indexOf(PZ.lang) + 1) % langs.length]); this.buildControls(); if (this.presenter && !this.presenter.win.closed) { this.presenter.win.close(); this.openPresenter(); } } }) : null,
+        this.opts.onExit ? btn('exit', t('Exit (Esc)'), () => this.exit()) : null,
+      ].filter(Boolean));
     }
 
     posOf(slideIndex) { const p = this.order.indexOf(slideIndex); return p < 0 ? Math.max(0, this.order.findIndex((i) => i > slideIndex)) : p; }
@@ -192,7 +204,7 @@
       if (c.step < c.steps.length) this.playStep();
       else if (this.pos < this.order.length - 1) this.go(this.pos + 1);
       else if (this.opts.loop) this.go(0);
-      else PZ.toast('End of the presentation', { timeout: 1600 });
+      else PZ.toast(t('End of the presentation'), { timeout: 1600 });
     }
 
     prev() {
@@ -316,10 +328,10 @@
   /** Presenter window: current & next slide, notes, timer. Same-origin popup driven from here. */
   PZ.openPresenter = function (player) {
     const win = window.open('', 'prezen-presenter', 'width=1200,height=760');
-    if (!win) { PZ.toast('The browser blocked the presenter window: allow pop-ups for this page.', { type: 'warn' }); return null; }
+    if (!win) { PZ.toast(t('The browser blocked the presenter window: allow pop-ups for this page.'), { type: 'warn' }); return null; }
     const d = win.document;
     d.open();
-    d.write('<!doctype html><html><head><meta charset="utf-8"><title>Presenter view</title></head><body class="pz-presenter-body"></body></html>');
+    d.write(`<!doctype html><html lang="${PZ.lang}"><head><meta charset="utf-8"><title>${PZ.escapeHtml(t('Presenter view'))}</title></head><body class="pz-presenter-body"></body></html>`);
     d.close();
     d.head.appendChild(Object.assign(d.createElement('style'), { textContent: PZ.cssText() }));
     PZ.loadFonts(player.doc, d);
@@ -329,16 +341,16 @@
     const start = Date.now();
     let paused = 0, pausedAt = 0;
     const bar = H('div', { class: 'pzp-bar' },
-      H('button', { class: 'pzp-btn', text: '◀ Prev', onClick: () => player.prev() }),
-      H('button', { class: 'pzp-btn pzp-primary', text: 'Next ▶', onClick: () => player.next() }),
+      H('button', { class: 'pzp-btn', text: t('◀ Prev'), onClick: () => player.prev() }),
+      H('button', { class: 'pzp-btn pzp-primary', text: t('Next ▶'), onClick: () => player.next() }),
       count, timer,
-      H('button', { class: 'pzp-btn', text: 'Pause timer', onClick: (e) => { if (pausedAt) { paused += Date.now() - pausedAt; pausedAt = 0; e.target.textContent = 'Pause timer'; } else { pausedAt = Date.now(); e.target.textContent = 'Resume'; } } }),
+      H('button', { class: 'pzp-btn', text: t('Pause timer'), onClick: (e) => { if (pausedAt) { paused += Date.now() - pausedAt; pausedAt = 0; e.target.textContent = t('Pause timer'); } else { pausedAt = Date.now(); e.target.textContent = t('Resume'); } } }),
       clock);
-    d.body.append(H('div', { class: 'pzp' }, H('div', { class: 'pzp-main' }, H('div', { class: 'pzp-label', text: 'Current' }), cur),
-      H('div', { class: 'pzp-side' }, H('div', { class: 'pzp-label', text: 'Next' }), nxt, H('div', { class: 'pzp-label', text: 'Notes' }), notes), bar));
+    d.body.append(H('div', { class: 'pzp' }, H('div', { class: 'pzp-main' }, H('div', { class: 'pzp-label', text: t('Current') }), cur),
+      H('div', { class: 'pzp-side' }, H('div', { class: 'pzp-label', text: t('Next') }), nxt, H('div', { class: 'pzp-label', text: t('Notes') }), notes), bar));
     const fit = (box, slide, steps, k) => {
       box.textContent = '';
-      if (!slide) { box.appendChild(H('div', { class: 'pzp-end', text: 'End of presentation' })); return; }
+      if (!slide) { box.appendChild(H('div', { class: 'pzp-end', text: t('End of presentation') })); return; }
       const w = box.clientWidth || 400;
       const th = PZ.renderThumb(player.doc, slide, w);
       if (steps) PZ.applySteps(th.firstChild, steps, k);
@@ -352,8 +364,8 @@
         fit(cur, c.slide, c.steps, c.step);
         if (c.step < c.steps.length) fit(nxt, c.slide, c.steps, c.step + 1);
         else fit(nxt, player.doc.slides[player.order[player.pos + 1]], null);
-        notes.textContent = c.slide.notes || 'No notes for this slide.';
-        count.textContent = `Slide ${player.pos + 1} / ${player.order.length}`;
+        notes.textContent = c.slide.notes || t('No notes for this slide.');
+        count.textContent = t('Slide {n} / {total}', { n: player.pos + 1, total: player.order.length });
       },
     };
     const tick = () => {
@@ -361,7 +373,7 @@
       const ms = (pausedAt || Date.now()) - start - paused;
       const s = Math.floor(ms / 1000);
       timer.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-      clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      clock.textContent = new Date().toLocaleTimeString(PZ.lang, { hour: '2-digit', minute: '2-digit' });
       win.setTimeout(tick, 500);
     };
     win.addEventListener('keydown', (e) => { if (!e.target.closest('button')) player.onKey(e); });

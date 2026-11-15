@@ -1,7 +1,7 @@
 /* PrezEn · editor/ui: small UI kit (modals, menus, popovers, form fields). */
 (function (PZ) {
   'use strict';
-  const h = PZ.h;
+  const h = PZ.h, t = PZ.t;
   const ui = (PZ.ui = {});
 
   /** Modal dialog. Returns {el, body, close}. */
@@ -11,7 +11,7 @@
     const body = h('div', { class: 'ui-modal-body' });
     const foot = h('div', { class: 'ui-modal-foot' });
     const box = h('div', { class: 'ui-modal' + (o.wide ? ' ui-wide' : '') + (o.cls ? ' ' + o.cls : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': o.title },
-      h('div', { class: 'ui-modal-head' }, h('h2', { text: o.title }), h('button', { class: 'ui-icon-btn', 'aria-label': 'Close', onClick: close }, PZ.icon('x'))),
+      h('div', { class: 'ui-modal-head' }, h('h2', { text: o.title }), h('button', { class: 'ui-icon-btn', 'aria-label': t('Close'), onClick: close }, PZ.icon('x'))),
       body, foot);
     const back = h('div', { class: 'ui-backdrop', onMousedown: (e) => { if (e.target === back) close(); } }, box);
     (o.buttons || []).forEach((b) => foot.appendChild(h('button', { class: 'ui-btn' + (b.primary ? ' ui-primary' : '') + (b.danger ? ' ui-danger' : ''), text: b.label, onClick: () => b.run(close) })));
@@ -26,14 +26,14 @@
   ui.confirm = (title, text, okLabel, danger) => new Promise((resolve) => {
     let ok = false;
     ui.modal({ title, content: h('p', { text }), onClose: () => resolve(ok),
-      buttons: [{ label: 'Cancel', run: (c) => c() }, { label: okLabel || 'OK', primary: !danger, danger, run: (c) => { ok = true; c(); } }] });
+      buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: okLabel || t('OK'), primary: !danger, danger, run: (c) => { ok = true; c(); } }] });
   });
 
   ui.prompt = (title, label, value) => new Promise((resolve) => {
     let out = null;
     const input = h('input', { class: 'ui-input', value: value || '', autofocus: true, onKeydown: (e) => { if (e.key === 'Enter') { out = input.value; m.close(); } } });
     const m = ui.modal({ title, content: [h('label', { class: 'ui-label', text: label }), input], onClose: () => resolve(out),
-      buttons: [{ label: 'Cancel', run: (c) => c() }, { label: 'OK', primary: true, run: (c) => { out = input.value; c(); } }] });
+      buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: t('OK'), primary: true, run: (c) => { out = input.value; c(); } }] });
   });
 
   let openPop = null;
@@ -85,6 +85,7 @@
 
   ui.row = (label, ...controls) => h('div', { class: 'ui-row' }, label ? h('label', { class: 'ui-row-label', text: label }) : null, h('div', { class: 'ui-row-ctl' }, controls));
 
+  /** Collapsible section. title is the English text: translated here, and its open/closed state is kept across languages. */
   ui.section = function (title, content, o) {
     o = o || {};
     const key = 'prezen:sec:' + title;
@@ -92,7 +93,7 @@
     try { closed = localStorage.getItem(key) === '1'; } catch (e) { /* ignore */ }
     const sec = h('section', { class: 'ui-sec' + (closed ? ' ui-closed' : '') },
       h('button', { class: 'ui-sec-head', onClick: () => { sec.classList.toggle('ui-closed'); try { localStorage.setItem(key, sec.classList.contains('ui-closed') ? '1' : '0'); } catch (e) { /* ignore */ } } },
-        h('span', { text: title }), o.extra || null, PZ.icon('chevron-down', 'ui-sec-chev')),
+        h('span', { text: t(title) }), o.extra || null, PZ.icon('chevron-down', 'ui-sec-chev')),
       h('div', { class: 'ui-sec-body' }, content));
     return sec;
   };
@@ -106,7 +107,7 @@
     const wrap = h('div', { class: 'ui-num-wrap' + (o.label ? ' ui-has-label' : '') });
     if (o.label) {
       // drag the little label to scrub the value
-      const lab = h('span', { class: 'ui-num-label', text: o.label, title: 'Drag to change' });
+      const lab = h('span', { class: 'ui-num-label', text: o.label, title: t('Drag to change') });
       lab.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         const x0 = e.clientX, v0 = parseFloat(input.value) || 0;
@@ -169,10 +170,10 @@
     const sw = h('span', { class: 'ui-swatch-fill' });
     const paint = (v) => { sw.style.background = v || 'transparent'; sw.classList.toggle('ui-none', !v); };
     paint(value);
-    const btn = h('button', { class: 'ui-swatch', title: o.title || 'Colour', onMousedown: (e) => e.preventDefault() }, sw);
+    const btn = h('button', { class: 'ui-swatch', title: o.title || t('Colour'), onMousedown: (e) => e.preventDefault() }, sw);
     btn.addEventListener('click', () => {
       const native = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(value) ? value : '#5b5bf0' });
-      const text = h('input', { class: 'ui-input ui-mono', value: value || '', placeholder: 'none' });
+      const text = h('input', { class: 'ui-input ui-mono', value: value || '', placeholder: t('none') });
       const set = (v, done) => { if (v && !PZ.isColor(v)) return; value = v; paint(v); onChange(v, done); };
       native.addEventListener('input', () => { text.value = native.value; set(native.value, false); });
       native.addEventListener('change', () => set(native.value, true));
@@ -180,7 +181,7 @@
       const grid = h('div', { class: 'ui-swatches' }, (o.palette || []).concat(ui.SWATCHES).filter((v, i, a) => a.indexOf(v) === i).map((c) =>
         h('button', { class: 'ui-swatch-pick', style: { background: c }, title: c, onMousedown: (e) => e.preventDefault(), onClick: () => { text.value = c; set(c, true); } })));
       ui.popover(btn, h('div', { class: 'ui-color-pop' }, grid,
-        h('div', { class: 'ui-color-row' }, native, text, o.allowNone ? h('button', { class: 'ui-btn ui-small', text: 'None', onMousedown: (e) => e.preventDefault(), onClick: () => { text.value = ''; set('', true); } }) : null)));
+        h('div', { class: 'ui-color-row' }, native, text, o.allowNone ? h('button', { class: 'ui-btn ui-small', text: t('None'), onMousedown: (e) => e.preventDefault(), onClick: () => { text.value = ''; set('', true); } }) : null)));
     });
     return btn;
   };

@@ -41,7 +41,7 @@
     document.head.appendChild(style);
     document.body.appendChild(root);
     PZ.loadFonts(doc);
-    const t = PZ.toast('Preparing PDF… In the print dialog choose “Save as PDF”.', { timeout: 6000 });
+    const t = PZ.toast(PZ.t('Preparing PDF… In the print dialog choose “Save as PDF”.'), { timeout: 6000 });
     await waitImages(root, 10000);
     try { if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 3000))]); } catch (e) { /* ignore */ }
     const cleanup = () => { root.remove(); style.remove(); window.removeEventListener('afterprint', cleanup); };

@@ -32,6 +32,7 @@
 | Edit from a flashdrive | **Export → Editable presentation (HTML)**, or **Ctrl+S**. Open it from the drive, edit, **Ctrl+S** again. In Chrome/Edge the file is overwritten in place (pick the same file once); other browsers download an updated copy. |
 | Print / PDF | **Ctrl+P** or **Export → PDF**, then *Save as PDF* in the print dialog. |
 | Keep the raw data | **Export → Data (JSON)**. The app opens `.json` and exported `.html` files (menu, or drop them on the canvas). |
+| Switch language (English / Français) | Click **EN/FR** in the status bar (or **Menu → Language**), or the **EN/FR** button of a slideshow. The choice is remembered in this browser and saved inside exported files, so a file opened on another computer keeps its language. |
 
 ### Pictures
 
@@ -77,6 +78,7 @@ created from a local file point there.
 | File | Role |
 | --- | --- |
 | `src/js/core.js` | Namespace `PZ`, DOM helper, utilities |
+| `src/js/i18n.js`, `editor/lang-fr.js` | Interface languages: `PZ.t('English text')` looks up the French dictionary (player strings in `i18n.js`, editor strings in `lang-fr.js`; a test checks none is missing) |
 | `src/js/sanitize.js` | Allow-list sanitizers for rich text and SVG (links carry whole decks: they are untrusted) |
 | `src/js/model.js` | Document format, defaults, validation (`normalizeDoc`), layouts, fonts |
 | `src/js/assets.js` | Image references: embedded assets, Drive / S3 / Dropbox / relative paths |

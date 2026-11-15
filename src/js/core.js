@@ -105,7 +105,7 @@
     if (!box) { box = PZ.h('div', { id: 'pz-toasts', class: 'pz-toasts', role: 'status', 'aria-live': 'polite' }); document.body.appendChild(box); }
     const t = PZ.h('div', { class: 'pz-toast' + (opts.type ? ' pz-toast-' + opts.type : '') }, PZ.h('span', { text: msg }));
     if (opts.action) t.appendChild(PZ.h('button', { class: 'pz-toast-act', text: opts.action.label, onClick: () => { opts.action.run(); t.remove(); } }));
-    t.appendChild(PZ.h('button', { class: 'pz-toast-x', 'aria-label': 'Close', text: '×', onClick: () => t.remove() }));
+    t.appendChild(PZ.h('button', { class: 'pz-toast-x', 'aria-label': PZ.t ? PZ.t('Close') : 'Close', text: '×', onClick: () => t.remove() }));
     box.appendChild(t);
     const ms = opts.timeout == null ? 3800 : opts.timeout;
     if (ms) setTimeout(() => t.remove(), ms);

@@ -1,7 +1,7 @@
 /* PrezEn · editor/panels: slide list (left) and properties inspector (right). */
 (function (PZ) {
   'use strict';
-  const h = PZ.h, E = PZ.ed, ui = PZ.ui;
+  const h = PZ.h, E = PZ.ed, ui = PZ.ui, t = PZ.t;
 
   // ================================================================ slides list
   const P = (PZ.edSlides = {});
@@ -10,7 +10,7 @@
 
   P.mount = function (pane) {
     list = h('div', { class: 'ed-slide-list' });
-    const add = h('button', { class: 'ed-add-slide', onClick: (e) => layoutMenu(e.currentTarget, E.cur) }, PZ.icon('plus'), h('span', { text: 'New slide' }));
+    const add = h('button', { class: 'ed-add-slide', onClick: (e) => layoutMenu(e.currentTarget, E.cur) }, PZ.icon('plus'), h('span', { text: t('New slide') }));
     pane.append(list, add);
     list.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -27,37 +27,37 @@
     for (const L of PZ.LAYOUTS) {
       const tmp = PZ.newSlide(E.doc, L.id);
       tmp.bg = PZ.clone(E.slide().bg);
-      grid.appendChild(h('button', { class: 'ed-layout-btn', onClick: () => { pop.close(); E.addSlide(L.id, after); } }, PZ.renderThumb(E.doc, tmp, 132), h('span', { text: L.name })));
+      grid.appendChild(h('button', { class: 'ed-layout-btn', onClick: () => { pop.close(); E.addSlide(L.id, after); } }, PZ.renderThumb(E.doc, tmp, 132), h('span', { text: t(L.name) })));
     }
-    const pop = ui.popover(anchor, h('div', { class: 'ed-pop-pad' }, h('div', { class: 'ui-menu-head', text: 'Choose a layout' }), grid));
+    const pop = ui.popover(anchor, h('div', { class: 'ed-pop-pad' }, h('div', { class: 'ui-menu-head', text: t('Choose a layout') }), grid));
   }
 
   function slideMenu(anchor, i, at) {
     const s = E.doc.slides[i];
     ui.menu(anchor, [
-      { label: 'New slide after', icon: 'plus', kbd: 'N', run: () => layoutMenu(anchor, i) },
-      { label: 'Duplicate', icon: 'copy', kbd: 'Ctrl+D', run: () => E.duplicateSlide(i) },
-      { label: s.hidden ? 'Show in presentation' : 'Hide in presentation', icon: s.hidden ? 'eye' : 'eye-off', run: () => E.commit('Hide slide', () => { s.hidden = !s.hidden; }) },
+      { label: t('New slide after'), icon: 'plus', kbd: 'N', run: () => layoutMenu(anchor, i) },
+      { label: t('Duplicate'), icon: 'copy', kbd: 'Ctrl+D', run: () => E.duplicateSlide(i) },
+      { label: s.hidden ? t('Show in presentation') : t('Hide in presentation'), icon: s.hidden ? 'eye' : 'eye-off', run: () => E.commit('Hide slide', () => { s.hidden = !s.hidden; }) },
       '-',
-      { label: 'Move up', icon: 'arrow-up', kbd: 'Alt+↑', disabled: i === 0, run: () => E.moveSlide(i, i - 1) },
-      { label: 'Move down', icon: 'arrow-down', kbd: 'Alt+↓', disabled: i === E.doc.slides.length - 1, run: () => E.moveSlide(i, i + 1) },
+      { label: t('Move up'), icon: 'arrow-up', kbd: 'Alt+↑', disabled: i === 0, run: () => E.moveSlide(i, i - 1) },
+      { label: t('Move down'), icon: 'arrow-down', kbd: 'Alt+↓', disabled: i === E.doc.slides.length - 1, run: () => E.moveSlide(i, i + 1) },
       '-',
-      { label: 'Present from here', icon: 'play', run: () => { E.goSlide(i); E.present(true); } },
-      { label: 'Delete slide', icon: 'trash', danger: true, disabled: E.doc.slides.length < 2, run: () => E.deleteSlide(i) },
+      { label: t('Present from here'), icon: 'play', run: () => { E.goSlide(i); E.present(true); } },
+      { label: t('Delete slide'), icon: 'trash', danger: true, disabled: E.doc.slides.length < 2, run: () => E.deleteSlide(i) },
     ], at ? { at } : null);
   }
 
   function item(i) {
     const s = E.doc.slides[i];
-    const it = h('div', { class: 'ed-thumb-item' + (i === E.cur ? ' ed-on' : '') + (s.hidden ? ' ed-hidden' : ''), tabindex: '0', draggable: 'true', dataset: { i: String(i) }, 'aria-label': 'Slide ' + (i + 1) },
+    const it = h('div', { class: 'ed-thumb-item' + (i === E.cur ? ' ed-on' : '') + (s.hidden ? ' ed-hidden' : ''), tabindex: '0', draggable: 'true', dataset: { i: String(i) }, 'aria-label': t('Slide {n}', { n: i + 1 }) },
       h('span', { class: 'ed-thumb-num', text: String(i + 1) }),
       h('div', { class: 'ed-thumb-prev' }, PZ.renderThumb(E.doc, s, thumbW())),
       h('div', { class: 'ed-thumb-badges' },
         s.hidden ? PZ.icon('eye-off') : null,
-        s.els.some((e) => e.anim) ? h('span', { title: 'Has animations' }, PZ.icon('sparkles')) : null,
-        s.notes ? h('span', { title: 'Has speaker notes' }, PZ.icon('notes')) : null,
-        s.auto ? h('span', { title: 'Advances automatically after ' + s.auto + ' s' }, PZ.icon('clock')) : null),
-      h('button', { class: 'ed-thumb-more', title: 'Slide actions', onClick: (e) => { e.stopPropagation(); slideMenu(e.currentTarget, i); } }, PZ.icon('more')));
+        s.els.some((e) => e.anim) ? h('span', { title: t('Has animations') }, PZ.icon('sparkles')) : null,
+        s.notes ? h('span', { title: t('Has speaker notes') }, PZ.icon('notes')) : null,
+        s.auto ? h('span', { title: t('Advances automatically after {n} s', { n: s.auto }) }, PZ.icon('clock')) : null),
+      h('button', { class: 'ed-thumb-more', title: t('Slide actions'), onClick: (e) => { e.stopPropagation(); slideMenu(e.currentTarget, i); } }, PZ.icon('more')));
     it.addEventListener('click', () => { if (E.cur !== i) E.goSlide(i); else if (E.sel.length) E.select([]); });
     it.addEventListener('contextmenu', (e) => { e.preventDefault(); E.goSlide(i); slideMenu(it, i, { x: e.clientX, y: e.clientY }); });
     it.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/x-prezen-slide', String(i)); e.dataTransfer.effectAllowed = 'move'; it.classList.add('ed-dragging'); });
@@ -111,16 +111,16 @@
   function fxOptions(kinds, doc) {
     const out = [];
     for (const kind of kinds) {
-      const builtins = Object.values(PZ.EFFECTS).filter((e) => e.kind === kind).map((e) => ({ value: e.id, label: e.name }));
+      const builtins = Object.values(PZ.EFFECTS).filter((e) => e.kind === kind).map((e) => ({ value: e.id, label: t(e.name) }));
       const custom = Object.values(doc.effects || {}).filter((e) => e.kind === kind).map((e) => ({ value: e.id, label: '★ ' + e.name }));
-      out.push({ group: PZ.FX_KINDS[kind], options: builtins.concat(custom) });
+      out.push({ group: t(PZ.FX_KINDS[kind]), options: builtins.concat(custom) });
     }
     return out;
   }
-  const easingOptions = (withDefault) => (withDefault ? [{ value: '', label: 'Effect default' }] : []).concat(PZ.EASINGS.map((e) => ({ value: e.id, label: e.name })));
+  const easingOptions = (withDefault) => (withDefault ? [{ value: '', label: t('Effect default') }] : []).concat(PZ.EASINGS.map((e) => ({ value: e.id, label: t(e.name) })));
   const fontOptions = () => [
-    { group: 'Always available', options: PZ.FONTS.filter((f) => f.google == null).map((f) => ({ value: f.name, label: f.name })) },
-    { group: 'Google Fonts (online, embeddable)', options: PZ.FONTS.filter((f) => f.google != null).map((f) => ({ value: f.name, label: f.name })) },
+    { group: t('Always available'), options: PZ.FONTS.filter((f) => f.google == null).map((f) => ({ value: f.name, label: t(f.name) })) },
+    { group: t('Google Fonts (online, embeddable)'), options: PZ.FONTS.filter((f) => f.google != null).map((f) => ({ value: f.name, label: f.name })) },
   ];
 
   I.render = function () {
@@ -140,38 +140,38 @@
   function slidePanel() {
     const s = E.slide();
     const i = E.cur;
-    head('Slide ' + (i + 1), [ui.iconBtn('copy', 'Duplicate slide', () => E.duplicateSlide()), ui.iconBtn('trash', 'Delete slide', () => E.deleteSlide())]);
+    head(t('Slide {n}', { n: i + 1 }), [ui.iconBtn('copy', t('Duplicate slide'), () => E.duplicateSlide()), ui.iconBtn('trash', t('Delete slide'), () => E.deleteSlide())]);
     const bg = s.bg;
     const bgBody = h('div');
-    bgBody.appendChild(ui.seg(bg.type, [{ value: 'color', label: 'Colour' }, { value: 'gradient', label: 'Gradient' }, { value: 'image', label: 'Image' }],
+    bgBody.appendChild(ui.seg(bg.type, [{ value: 'color', label: t('Colour') }, { value: 'gradient', label: t('Gradient') }, { value: 'image', label: t('Image') }],
       (v) => { live('Background', () => { bg.type = v; }, true); }));
-    if (bg.type === 'color' || bg.type === 'gradient') bgBody.appendChild(ui.row(bg.type === 'gradient' ? 'From' : 'Colour', ui.color(bg.color, set('Background', (v) => { bg.color = v || '#ffffff'; }), { palette: [E.doc.theme.bg, E.doc.theme.accent] })));
+    if (bg.type === 'color' || bg.type === 'gradient') bgBody.appendChild(ui.row(bg.type === 'gradient' ? t('From') : t('Colour'), ui.color(bg.color, set('Background', (v) => { bg.color = v || '#ffffff'; }), { palette: [E.doc.theme.bg, E.doc.theme.accent] })));
     if (bg.type === 'gradient') {
-      bgBody.appendChild(ui.row('To', ui.color(bg.color2, set('Background', (v) => { bg.color2 = v || '#000000'; }))));
-      bgBody.appendChild(ui.row('Angle', ui.slider(bg.angle, set('Background', (v) => { bg.angle = v; }), { min: 0, max: 360, fmt: (v) => v + '°' })));
-      bgBody.appendChild(ui.row('Radial', ui.toggle(bg.radial, set('Background', (v) => { bg.radial = v; }))));
+      bgBody.appendChild(ui.row(t('To'), ui.color(bg.color2, set('Background', (v) => { bg.color2 = v || '#000000'; }))));
+      bgBody.appendChild(ui.row(t('Angle'), ui.slider(bg.angle, set('Background', (v) => { bg.angle = v; }), { min: 0, max: 360, fmt: (v) => v + '°' })));
+      bgBody.appendChild(ui.row(t('Radial'), ui.toggle(bg.radial, set('Background', (v) => { bg.radial = v; }))));
     }
     if (bg.type === 'image') {
-      bgBody.appendChild(ui.row('Picture', h('button', { class: 'ui-btn ui-small', text: bg.src ? 'Replace…' : 'Choose…', onClick: () => PZ.edDialogs.image({ title: 'Background image', onPick: (ref) => live('Background image', () => { bg.src = ref; }, true) }) }),
-        bg.src ? h('span', { class: 'ed-src-badge', text: PZ.SRC_LABELS[PZ.srcKind(bg.src)] }) : null));
-      bgBody.appendChild(ui.row('Fit', ui.seg(bg.fit, [{ value: 'cover', label: 'Fill' }, { value: 'contain', label: 'Fit' }], set('Background', (v) => { bg.fit = v; }))));
-      bgBody.appendChild(ui.row('Under', ui.color(bg.color, set('Background', (v) => { bg.color = v || '#ffffff'; }))));
-      bgBody.appendChild(ui.row('Tint', ui.color(bg.overlay, set('Background', (v) => { bg.overlay = v || '#000000'; }))));
-      bgBody.appendChild(ui.row('Tint %', ui.slider(Math.round(bg.overlayOpacity * 100), set('Background', (v) => { bg.overlayOpacity = v / 100; }), { min: 0, max: 100, fmt: (v) => v + '%' })));
+      bgBody.appendChild(ui.row(t('Picture'), h('button', { class: 'ui-btn ui-small', text: bg.src ? t('Replace…') : t('Choose…'), onClick: () => PZ.edDialogs.image({ title: t('Background image'), onPick: (ref) => live('Background image', () => { bg.src = ref; }, true) }) }),
+        bg.src ? h('span', { class: 'ed-src-badge', text: t(PZ.SRC_LABELS[PZ.srcKind(bg.src)]) }) : null));
+      bgBody.appendChild(ui.row(t('Fit'), ui.seg(bg.fit, [{ value: 'cover', label: t('Fill') }, { value: 'contain', label: t('Fit') }], set('Background', (v) => { bg.fit = v; }))));
+      bgBody.appendChild(ui.row(t('Under'), ui.color(bg.color, set('Background', (v) => { bg.color = v || '#ffffff'; }))));
+      bgBody.appendChild(ui.row(t('Tint'), ui.color(bg.overlay, set('Background', (v) => { bg.overlay = v || '#000000'; }))));
+      bgBody.appendChild(ui.row(t('Tint %'), ui.slider(Math.round(bg.overlayOpacity * 100), set('Background', (v) => { bg.overlayOpacity = v / 100; }), { min: 0, max: 100, fmt: (v) => v + '%' })));
     }
-    bgBody.appendChild(h('button', { class: 'ui-btn ui-small ui-ghost', text: 'Apply to all slides', onClick: () => E.commit('Background on all slides', (d) => d.slides.forEach((x) => { x.bg = PZ.clone(bg); })) }));
+    bgBody.appendChild(h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Apply to all slides'), onClick: () => E.commit('Background on all slides', (d) => d.slides.forEach((x) => { x.bg = PZ.clone(bg); })) }));
     pane.appendChild(ui.section('Background', bgBody));
 
-    const t = s.transition;
-    const fx = PZ.getEffect(E.doc, t.effect);
+    const tr = s.transition;
+    const fx = PZ.getEffect(E.doc, tr.effect);
     pane.appendChild(ui.section('Transition into this slide', h('div', null,
-      ui.row('Effect', ui.select(t.effect, fxOptions(['transition'], E.doc), (v) => live('Transition', () => { t.effect = v; const f = PZ.getEffect(E.doc, v); t.duration = f && f.duration != null ? f.duration || 0 : 700; t.easing = ''; }, true))),
-      fx && fx.id !== 'none' ? ui.row('Duration', ui.slider(t.duration, set('Transition', (v) => { t.duration = v; }), { min: 100, max: 3000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })) : null,
-      fx && fx.id !== 'none' ? ui.row('Easing', ui.select(t.easing, easingOptions(true), set('Transition', (v) => { t.easing = v; }))) : null,
+      ui.row(t('Effect'), ui.select(tr.effect, fxOptions(['transition'], E.doc), (v) => live('Transition', () => { tr.effect = v; const f = PZ.getEffect(E.doc, v); tr.duration = f && f.duration != null ? f.duration || 0 : 700; tr.easing = ''; }, true))),
+      fx && fx.id !== 'none' ? ui.row(t('Duration'), ui.slider(tr.duration, set('Transition', (v) => { tr.duration = v; }), { min: 100, max: 3000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })) : null,
+      fx && fx.id !== 'none' ? ui.row(t('Easing'), ui.select(tr.easing, easingOptions(true), set('Transition', (v) => { tr.easing = v; }))) : null,
       h('div', { class: 'ui-btn-row' },
-        h('button', { class: 'ui-btn ui-small', onClick: () => previewTransition() }, PZ.icon('play'), h('span', { text: 'Preview' })),
-        h('button', { class: 'ui-btn ui-small ui-ghost', text: 'Apply to all', onClick: () => E.commit('Transition on all slides', (d) => d.slides.forEach((x) => { x.transition = PZ.clone(t); })) }),
-        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ select: t.effect }) }, PZ.icon('sparkles'), h('span', { text: 'Studio' }))))));
+        h('button', { class: 'ui-btn ui-small', onClick: () => previewTransition() }, PZ.icon('play'), h('span', { text: t('Preview') })),
+        h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Apply to all'), onClick: () => E.commit('Transition on all slides', (d) => d.slides.forEach((x) => { x.transition = PZ.clone(tr); })) }),
+        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') }))))));
 
     const animated = s.els.filter((e) => e.anim).sort((a, b) => (a.anim.order || 0) - (b.anim.order || 0));
     if (animated.length) {
@@ -180,18 +180,18 @@
         const f = PZ.getEffect(E.doc, el.anim.effect);
         listEl.appendChild(h('div', { class: 'ed-anim-row' },
           h('span', { class: 'ed-anim-n', text: String(n + 1) }),
-          h('button', { class: 'ed-anim-name', onClick: () => E.select([el.id]), title: 'Select' }, h('b', { text: elLabel(el) }), h('small', { text: (f ? f.name : el.anim.effect) + ' · ' + { click: 'on click', with: 'with previous', after: 'after previous' }[el.anim.trigger] })),
-          ui.iconBtn('chevron-up', 'Earlier', () => reorderAnim(animated, n, -1)),
-          ui.iconBtn('chevron-down', 'Later', () => reorderAnim(animated, n, 1))));
+          h('button', { class: 'ed-anim-name', onClick: () => E.select([el.id]), title: t('Select') }, h('b', { text: elLabel(el) }), h('small', { text: (f ? PZ.fxName(f) : el.anim.effect) + ' · ' + { click: t('on click'), with: t('with previous'), after: t('after previous') }[el.anim.trigger] })),
+          ui.iconBtn('chevron-up', t('Earlier'), () => reorderAnim(animated, n, -1)),
+          ui.iconBtn('chevron-down', t('Later'), () => reorderAnim(animated, n, 1))));
       });
       pane.appendChild(ui.section('Animation order', listEl));
     }
 
     pane.appendChild(ui.section('Playback', h('div', null,
-      ui.row('Auto-advance', ui.number(s.auto, set('Auto-advance', (v) => { s.auto = v; }), { min: 0, max: 3600, step: 1, unit: 's', title: '0 = wait for a click' })),
-      ui.row('Hidden', ui.toggle(s.hidden, (v) => live('Hide slide', () => { s.hidden = v; }, false), 'Skip this slide when presenting')))));
+      ui.row(t('Auto-advance'), ui.number(s.auto, set('Auto-advance', (v) => { s.auto = v; }), { min: 0, max: 3600, step: 1, unit: 's', title: t('0 = wait for a click') })),
+      ui.row(t('Hidden'), ui.toggle(s.hidden, (v) => live('Hide slide', () => { s.hidden = v; }, false), t('Skip this slide when presenting'))))));
 
-    pane.appendChild(ui.section('Speaker notes', ui.textarea(s.notes, set('Notes', (v) => { s.notes = v; }), { rows: 6, placeholder: 'Notes for you: shown in the presenter view (S) and in the notes PDF.' })));
+    pane.appendChild(ui.section('Speaker notes', ui.textarea(s.notes, set('Notes', (v) => { s.notes = v; }), { rows: 6, placeholder: t('Notes for you: shown in the presenter view (S) and in the notes PDF.') })));
   }
 
   function reorderAnim(animated, n, d) {
@@ -205,10 +205,11 @@
   }
 
   function elLabel(el) {
-    if (el.type === 'text' || (el.type === 'shape' && el.html)) { const t = PZ.htmlToText(el.html); return t ? t.slice(0, 28) : el.type; }
-    if (el.type === 'icon') return 'Icon ' + (el.name || '');
-    if (el.type === 'shape') return (PZ.SHAPES[el.shape] || {}).name || 'Shape';
-    return 'Image';
+    if (el.type === 'text' || (el.type === 'shape' && el.html)) { const s = PZ.htmlToText(el.html); if (s) return s.slice(0, 28); }
+    if (el.type === 'text') return t('Text');
+    if (el.type === 'icon') return t('Icon') + ' ' + (el.name || '');
+    if (el.type === 'shape') return t((PZ.SHAPES[el.shape] || {}).name || 'Shape');
+    return t('Image');
   }
 
   /** Play this slide's transition on the stage (from the previous slide). */
@@ -222,18 +223,18 @@
     const inn = h('div', { class: 'pz-layer' }, PZ.renderSlide(E.doc, E.slide(), 'play'));
     box.append(out, inn);
     stage.appendChild(box);
-    const t = E.slide().transition;
-    const run = PZ.runTransition({ inLayer: inn, outLayer: out, effect: PZ.getEffect(E.doc, t.effect), duration: t.duration, easing: t.easing, w: E.doc.w, h: E.doc.h, perspective: box });
+    const tr = E.slide().transition;
+    const run = PZ.runTransition({ inLayer: inn, outLayer: out, effect: PZ.getEffect(E.doc, tr.effect), duration: tr.duration, easing: tr.easing, w: E.doc.w, h: E.doc.h, perspective: box });
     run.finished.then(() => setTimeout(() => box.remove(), 250));
   }
 
   // ---------------------------------------------------------------- element
   function elementPanel(el) {
-    const names = { text: 'Text', image: 'Image', shape: (PZ.SHAPES[el.shape] || {}).name || 'Shape', icon: 'Icon' };
+    const names = { text: t('Text'), image: t('Image'), shape: t((PZ.SHAPES[el.shape] || {}).name || 'Shape'), icon: t('Icon') };
     head(names[el.type], [
-      ui.iconBtn(el.locked ? 'lock' : 'unlock', el.locked ? 'Unlock' : 'Lock position', () => E.commit('Lock', () => { el.locked = !el.locked; }), { on: el.locked }),
-      ui.iconBtn('copy', 'Duplicate (Ctrl+D)', () => E.duplicateSel()),
-      ui.iconBtn('trash', 'Delete (Del)', () => E.deleteSel()),
+      ui.iconBtn(el.locked ? 'lock' : 'unlock', el.locked ? t('Unlock') : t('Lock position'), () => E.commit('Lock', () => { el.locked = !el.locked; }), { on: el.locked }),
+      ui.iconBtn('copy', t('Duplicate (Ctrl+D)'), () => E.duplicateSel()),
+      ui.iconBtn('trash', t('Delete (Del)'), () => E.deleteSel()),
     ]);
     if (el.type === 'text') pane.appendChild(ui.section('Text', textControls(el, true)));
     if (el.type === 'shape') { pane.appendChild(ui.section('Shape', shapeControls(el))); pane.appendChild(ui.section('Text in shape', textControls(el, false))); }
@@ -242,10 +243,10 @@
     pane.appendChild(ui.section('Position & size', positionControls(el)));
     pane.appendChild(ui.section('Animation', animControls(el)));
     pane.appendChild(ui.section('Effects & link', h('div', null,
-      ui.row('Shadow', ui.select(el.shadow, Object.entries(PZ.SHADOWS).filter(([k2]) => k2 !== 'text').map(([k2, v]) => ({ value: k2, label: v.name })), set('Shadow', (v) => { el.shadow = v; }))),
-      ui.row('Link', ui.text(el.link, (v, done) => { if (done) live('Link', () => { el.link = PZ.safeLink(v.trim()); }, true); }, { placeholder: 'https://…  or  #3 (slide 3)' })),
-      el.link && !PZ.safeLink(el.link) ? h('p', { class: 'ed-hint ed-warn', text: 'Links must start with https://, mailto: or be a slide number like #3.' }) : null,
-      h('p', { class: 'ed-hint', text: 'In the presentation, clicking the element opens the link or jumps to the slide.' }))));
+      ui.row(t('Shadow'), ui.select(el.shadow, Object.entries(PZ.SHADOWS).filter(([k2]) => k2 !== 'text').map(([k2, v]) => ({ value: k2, label: t(v.name) })), set('Shadow', (v) => { el.shadow = v; }))),
+      ui.row(t('Link'), ui.text(el.link, (v, done) => { if (done) live('Link', () => { el.link = PZ.safeLink(v.trim()); }, true); }, { placeholder: t('https://…  or  #3 (slide 3)') })),
+      el.link && !PZ.safeLink(el.link) ? h('p', { class: 'ed-hint ed-warn', text: t('Links must start with https://, mailto: or be a slide number like #3.') }) : null,
+      h('p', { class: 'ed-hint', text: t('In the presentation, clicking the element opens the link or jumps to the slide.') }))));
   }
 
   function textControls(el, isText) {
@@ -257,33 +258,33 @@
       live(label, () => { st[key] = v; }, false);
       if (done) E.refresh('inspector');
     };
-    if (!isText) box.appendChild(h('p', { class: 'ed-hint', text: 'Double-click the shape (or press Enter) to type in it.' }));
-    box.appendChild(ui.row('Font', ui.select(st.font, fontOptions(), styleOrSel('Font', 'font', 'fontName'), { cls: 'ed-font-select' })));
-    box.appendChild(ui.row('Size', ui.number(st.size, (v, done) => {
+    if (!isText) box.appendChild(h('p', { class: 'ed-hint', text: t('Double-click the shape (or press Enter) to type in it.') }));
+    box.appendChild(ui.row(t('Font'), ui.select(st.font, fontOptions(), styleOrSel('Font', 'font', 'fontName'), { cls: 'ed-font-select' })));
+    box.appendChild(ui.row(t('Size'), ui.number(st.size, (v, done) => {
       if (rich()) { if (done) PZ.edStage.execText('fontSizePx', v); return; }
       live('Font size', () => { st.size = v; });
-    }, { min: 4, max: 1000, step: 1, unit: 'px' }), ui.color(st.color, styleOrSel('Text colour', 'color', 'foreColor'), { palette: [E.doc.theme.color, E.doc.theme.accent, E.doc.theme.accent2], title: 'Text colour' })));
-    const toggle = (icon, title, key, cmd) => ui.iconBtn(icon, title, () => {
+    }, { min: 4, max: 1000, step: 1, unit: 'px' }), ui.color(st.color, styleOrSel('Text colour', 'color', 'foreColor'), { palette: [E.doc.theme.color, E.doc.theme.accent, E.doc.theme.accent2], title: t('Text colour') })));
+    const toggle = (icon, title, key, cmd) => ui.iconBtn(icon, t(title), () => {
       if (rich() || (E.editing && E.editing.id === el.id && cmd !== null && rich())) { PZ.edStage.execText(cmd); return; }
       live(title, () => { st[key] = !st[key]; }, true);
     }, { on: !!st[key] });
-    box.appendChild(ui.row('Style',
+    box.appendChild(ui.row(t('Style'),
       h('div', { class: 'ui-btn-group' }, toggle('bold', 'Bold', 'bold', 'bold'), toggle('italic', 'Italic', 'italic', 'italic'), toggle('underline', 'Underline', 'underline', 'underline'),
-        ui.iconBtn('strike', 'Strikethrough (selected text)', () => withEdit(el, () => PZ.edStage.execText('strikeThrough'))),
-        ui.iconBtn('list', 'Bullet list', () => withEdit(el, () => PZ.edStage.execText('insertUnorderedList'))),
-        ui.iconBtn('list-ordered', 'Numbered list', () => withEdit(el, () => PZ.edStage.execText('insertOrderedList'))))));
-    box.appendChild(ui.row('Align', ui.seg(st.align, ['left', 'center', 'right', 'justify'].map((a) => ({ value: a, icon: 'align-' + a, title: a })), set('Align', (v) => { st.align = v; })),
-      ui.seg(st.valign, [{ value: 'top', icon: 'valign-top', title: 'Top' }, { value: 'middle', icon: 'valign-middle', title: 'Middle' }, { value: 'bottom', icon: 'valign-bottom', title: 'Bottom' }], set('Vertical align', (v) => { st.valign = v; }))));
-    box.appendChild(ui.row('Line height', ui.slider(st.lh, set('Line height', (v) => { st.lh = v; }), { min: 0.7, max: 3, step: 0.05 })));
-    box.appendChild(ui.row('Spacing', ui.number(st.ls, set('Letter spacing', (v) => { st.ls = v; }), { min: -20, max: 100, step: 0.5, unit: 'px' }),
-      ui.select(st.tshadow, [{ value: '', label: 'No text shadow' }, { value: 'text', label: 'Text shadow' }], set('Text shadow', (v) => { st.tshadow = v; }))));
+        ui.iconBtn('strike', t('Strikethrough (selected text)'), () => withEdit(el, () => PZ.edStage.execText('strikeThrough'))),
+        ui.iconBtn('list', t('Bullet list'), () => withEdit(el, () => PZ.edStage.execText('insertUnorderedList'))),
+        ui.iconBtn('list-ordered', t('Numbered list'), () => withEdit(el, () => PZ.edStage.execText('insertOrderedList'))))));
+    box.appendChild(ui.row(t('Align'), ui.seg(st.align, [['left', 'Left'], ['center', 'Center'], ['right', 'Right'], ['justify', 'Justify']].map(([a, l]) => ({ value: a, icon: 'align-' + a, title: t(l) })), set('Align', (v) => { st.align = v; })),
+      ui.seg(st.valign, [{ value: 'top', icon: 'valign-top', title: t('Top') }, { value: 'middle', icon: 'valign-middle', title: t('Middle') }, { value: 'bottom', icon: 'valign-bottom', title: t('Bottom') }], set('Vertical align', (v) => { st.valign = v; }))));
+    box.appendChild(ui.row(t('Line height'), ui.slider(st.lh, set('Line height', (v) => { st.lh = v; }), { min: 0.7, max: 3, step: 0.05 })));
+    box.appendChild(ui.row(t('Spacing'), ui.number(st.ls, set('Letter spacing', (v) => { st.ls = v; }), { min: -20, max: 100, step: 0.5, unit: 'px' }),
+      ui.select(st.tshadow, [{ value: '', label: t('No text shadow') }, { value: 'text', label: t('Text shadow') }], set('Text shadow', (v) => { st.tshadow = v; }))));
     if (isText) {
-      box.appendChild(ui.row('Box', ui.color(st.bg, set('Text background', (v) => { st.bg = v; }, true), { allowNone: true, title: 'Box colour' }),
-        ui.number(st.pad, set('Padding', (v) => { st.pad = v; }), { min: 0, max: 400, label: 'pad' }),
-        st.bg ? ui.number(st.radius, set('Corner radius', (v) => { st.radius = v; }), { min: 0, max: 1000, label: 'rad' }) : null));
-      box.appendChild(ui.row('Auto height', ui.toggle(el.autoH, set('Auto height', (v) => { el.autoH = v; }, true), 'Grow with the text')));
-    } else box.appendChild(ui.row('Padding', ui.number(st.pad, set('Padding', (v) => { st.pad = v; }), { min: 0, max: 400, unit: 'px' })));
-    box.appendChild(h('p', { class: 'ed-hint', text: 'Select words while editing to style only them.' }));
+      box.appendChild(ui.row(t('Box'), ui.color(st.bg, set('Text background', (v) => { st.bg = v; }, true), { allowNone: true, title: t('Box colour') }),
+        ui.number(st.pad, set('Padding', (v) => { st.pad = v; }), { min: 0, max: 400, label: t('pad') }),
+        st.bg ? ui.number(st.radius, set('Corner radius', (v) => { st.radius = v; }), { min: 0, max: 1000, label: t('rad') }) : null));
+      box.appendChild(ui.row(t('Auto height'), ui.toggle(el.autoH, set('Auto height', (v) => { el.autoH = v; }, true), t('Grow with the text'))));
+    } else box.appendChild(ui.row(t('Padding'), ui.number(st.pad, set('Padding', (v) => { st.pad = v; }), { min: 0, max: 400, unit: 'px' })));
+    box.appendChild(h('p', { class: 'ed-hint', text: t('Select words while editing to style only them.') }));
     return box;
   }
 
@@ -298,77 +299,77 @@
   function shapeControls(el) {
     const isLine = PZ.SHAPES[el.shape] && PZ.SHAPES[el.shape].line;
     const box = h('div');
-    box.appendChild(ui.row('Shape', ui.select(el.shape, Object.entries(PZ.SHAPES).map(([k2, v]) => ({ value: k2, label: v.name })), set('Shape', (v) => { el.shape = v; }, true))));
+    box.appendChild(ui.row(t('Shape'), ui.select(el.shape, Object.entries(PZ.SHAPES).map(([k2, v]) => ({ value: k2, label: t(v.name) })), set('Shape', (v) => { el.shape = v; }, true))));
     if (!isLine) {
-      box.appendChild(ui.row('Fill', ui.color(el.fill, set('Fill', (v) => { el.fill = v; }, true), { allowNone: true, palette: [E.doc.theme.accent, E.doc.theme.accent2] }),
-        h('span', { class: 'ed-mini-label', text: 'to' }), ui.color(el.fill2, set('Gradient', (v) => { el.fill2 = v; }, true), { allowNone: true, title: 'Second colour (gradient)' })));
-      if (el.fill2) box.appendChild(ui.row('Angle', ui.slider(el.gangle, set('Gradient angle', (v) => { el.gangle = v; }), { min: 0, max: 360, fmt: (v) => v + '°' })));
+      box.appendChild(ui.row(t('Fill'), ui.color(el.fill, set('Fill', (v) => { el.fill = v; }, true), { allowNone: true, palette: [E.doc.theme.accent, E.doc.theme.accent2] }),
+        h('span', { class: 'ed-mini-label', text: t('to') }), ui.color(el.fill2, set('Gradient', (v) => { el.fill2 = v; }, true), { allowNone: true, title: t('Second colour (gradient)') })));
+      if (el.fill2) box.appendChild(ui.row(t('Angle'), ui.slider(el.gangle, set('Gradient angle', (v) => { el.gangle = v; }), { min: 0, max: 360, fmt: (v) => v + '°' })));
     }
-    box.appendChild(ui.row(isLine ? 'Colour' : 'Border', ui.color(el.stroke, set('Stroke', (v) => { el.stroke = v; }), { allowNone: !isLine }),
-      ui.number(el.sw, set('Stroke width', (v) => { el.sw = v; }), { min: 0, max: 200, label: 'w' })));
-    box.appendChild(ui.row('Dash', ui.seg(el.dash, [{ value: '', label: 'Solid' }, { value: 'dash', label: 'Dash' }, { value: 'dot', label: 'Dot' }], set('Dash', (v) => { el.dash = v; }))));
-    if (el.shape === 'rect' || el.shape === 'rounded') box.appendChild(ui.row('Corners', ui.slider(el.radius, set('Corner radius', (v) => { el.radius = v; }), { min: 0, max: Math.round(Math.min(el.w, el.h) / 2) })));
+    box.appendChild(ui.row(isLine ? t('Colour') : t('Border'), ui.color(el.stroke, set('Stroke', (v) => { el.stroke = v; }), { allowNone: !isLine }),
+      ui.number(el.sw, set('Stroke width', (v) => { el.sw = v; }), { min: 0, max: 200, label: t('w') })));
+    box.appendChild(ui.row(t('Dash'), ui.seg(el.dash, [{ value: '', label: t('Solid') }, { value: 'dash', label: t('Dash') }, { value: 'dot', label: t('Dot') }], set('Dash', (v) => { el.dash = v; }))));
+    if (el.shape === 'rect' || el.shape === 'rounded') box.appendChild(ui.row(t('Corners'), ui.slider(el.radius, set('Corner radius', (v) => { el.radius = v; }), { min: 0, max: Math.round(Math.min(el.w, el.h) / 2) })));
     return box;
   }
 
   function imageControls(el) {
     const box = h('div');
     const kind = PZ.srcKind(el.src);
-    box.appendChild(h('div', { class: 'ed-src' }, h('span', { class: 'ed-src-badge', text: PZ.SRC_LABELS[kind] }),
+    box.appendChild(h('div', { class: 'ed-src' }, h('span', { class: 'ed-src-badge', text: t(PZ.SRC_LABELS[kind]) }),
       kind !== 'embedded' && kind !== 'none' ? h('code', { class: 'ed-src-ref', title: el.src, text: el.src.slice(0, 120) }) : null));
     box.appendChild(h('div', { class: 'ui-btn-row' },
-      h('button', { class: 'ui-btn ui-small', text: el.src ? 'Replace…' : 'Choose picture…', onClick: () => PZ.edDialogs.image({ title: 'Replace image', initial: el.src, onPick: (ref) => live('Replace image', () => { el.src = ref; }, true) }) }),
-      el.src && kind !== 'embedded' ? h('button', { class: 'ui-btn ui-small ui-ghost', text: 'Embed copy', title: 'Download the picture into the presentation so it works offline', onClick: async () => {
+      h('button', { class: 'ui-btn ui-small', text: el.src ? t('Replace…') : t('Choose picture…'), onClick: () => PZ.edDialogs.image({ title: t('Replace image'), initial: el.src, onPick: (ref) => live('Replace image', () => { el.src = ref; }, true) }) }),
+      el.src && kind !== 'embedded' ? h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Embed copy'), title: t('Download the picture into the presentation so it works offline'), onClick: async () => {
         const tmp = { slides: [{ els: [{ type: 'image', src: el.src }] }], assets: {} };
         const r = await PZ.embedImages(tmp);
-        if (r.failed.length) { PZ.toast('This host does not allow embedding (CORS). Download the picture and upload it instead.', { type: 'warn', timeout: 7000 }); return; }
+        if (r.failed.length) { PZ.toast(t('This host does not allow embedding (CORS). Download the picture and upload it instead.'), { type: 'warn', timeout: 7000 }); return; }
         const ref = tmp.slides[0].els[0].src;
         live('Embed image', (d) => { Object.assign(E.doc.assets, tmp.assets); el.src = ref; }, true);
       } }) : null));
-    box.appendChild(ui.row('Fit', ui.seg(el.fit, [{ value: 'cover', label: 'Fill' }, { value: 'contain', label: 'Fit' }, { value: 'fill', label: 'Stretch' }], set('Image fit', (v) => { el.fit = v; }))));
+    box.appendChild(ui.row(t('Fit'), ui.seg(el.fit, [{ value: 'cover', label: t('Fill') }, { value: 'contain', label: t('Fit') }, { value: 'fill', label: t('Stretch') }], set('Image fit', (v) => { el.fit = v; }))));
     if (el.fit === 'cover') {
-      box.appendChild(ui.row('Focus', ui.select(el.pos, [['50% 50%', 'Center'], ['50% 0%', 'Top'], ['50% 100%', 'Bottom'], ['0% 50%', 'Left'], ['100% 50%', 'Right'], ['0% 0%', 'Top left'], ['100% 0%', 'Top right'], ['0% 100%', 'Bottom left'], ['100% 100%', 'Bottom right']].map(([v, l]) => ({ value: v, label: l })), set('Image focus', (v) => { el.pos = v; }))));
+      box.appendChild(ui.row(t('Focus'), ui.select(el.pos, [['50% 50%', 'Center'], ['50% 0%', 'Top'], ['50% 100%', 'Bottom'], ['0% 50%', 'Left'], ['100% 50%', 'Right'], ['0% 0%', 'Top left'], ['100% 0%', 'Top right'], ['0% 100%', 'Bottom left'], ['100% 100%', 'Bottom right']].map(([v, l]) => ({ value: v, label: t(l) })), set('Image focus', (v) => { el.pos = v; }))));
     }
-    box.appendChild(ui.row('Corners', ui.slider(el.radius, set('Corner radius', (v) => { el.radius = v; }), { min: 0, max: Math.round(Math.min(el.w, el.h) / 2) })));
-    box.appendChild(ui.row('Border', ui.number(el.bw, set('Border', (v) => { el.bw = v; }), { min: 0, max: 200, unit: 'px' }), ui.color(el.bc, set('Border colour', (v) => { el.bc = v || '#ffffff'; }))));
-    box.appendChild(ui.row('Mirror', ui.toggle(el.flip, set('Mirror', (v) => { el.flip = v; }))));
+    box.appendChild(ui.row(t('Corners'), ui.slider(el.radius, set('Corner radius', (v) => { el.radius = v; }), { min: 0, max: Math.round(Math.min(el.w, el.h) / 2) })));
+    box.appendChild(ui.row(t('Border'), ui.number(el.bw, set('Border', (v) => { el.bw = v; }), { min: 0, max: 200, unit: 'px' }), ui.color(el.bc, set('Border colour', (v) => { el.bc = v || '#ffffff'; }))));
+    box.appendChild(ui.row(t('Mirror'), ui.toggle(el.flip, set('Mirror', (v) => { el.flip = v; }))));
     const f = el.filters || { brightness: 100, contrast: 100, saturate: 100, grayscale: 0, blur: 0 };
     const fset = (key) => set('Image filter', (v) => { el.filters = Object.assign({}, f, el.filters, { [key]: v }); });
-    box.appendChild(ui.row('Brightness', ui.slider(f.brightness, fset('brightness'), { min: 0, max: 200, fmt: (v) => v + '%' })));
-    box.appendChild(ui.row('Contrast', ui.slider(f.contrast, fset('contrast'), { min: 0, max: 200, fmt: (v) => v + '%' })));
-    box.appendChild(ui.row('Saturation', ui.slider(f.saturate, fset('saturate'), { min: 0, max: 200, fmt: (v) => v + '%' })));
-    box.appendChild(ui.row('Greyscale', ui.slider(f.grayscale, fset('grayscale'), { min: 0, max: 100, fmt: (v) => v + '%' })));
-    box.appendChild(ui.row('Blur', ui.slider(f.blur, fset('blur'), { min: 0, max: 30, fmt: (v) => v + 'px' })));
-    box.appendChild(ui.row('Alt text', ui.text(el.alt, set('Alt text', (v) => { el.alt = v; }), { placeholder: 'Describe the picture' })));
+    box.appendChild(ui.row(t('Brightness'), ui.slider(f.brightness, fset('brightness'), { min: 0, max: 200, fmt: (v) => v + '%' })));
+    box.appendChild(ui.row(t('Contrast'), ui.slider(f.contrast, fset('contrast'), { min: 0, max: 200, fmt: (v) => v + '%' })));
+    box.appendChild(ui.row(t('Saturation'), ui.slider(f.saturate, fset('saturate'), { min: 0, max: 200, fmt: (v) => v + '%' })));
+    box.appendChild(ui.row(t('Greyscale'), ui.slider(f.grayscale, fset('grayscale'), { min: 0, max: 100, fmt: (v) => v + '%' })));
+    box.appendChild(ui.row(t('Blur'), ui.slider(f.blur, fset('blur'), { min: 0, max: 30, fmt: (v) => v + 'px' })));
+    box.appendChild(ui.row(t('Alt text'), ui.text(el.alt, set('Alt text', (v) => { el.alt = v; }), { placeholder: t('Describe the picture') })));
     return box;
   }
 
   function iconControls(el) {
     return h('div', null,
-      ui.row('Colour', ui.color(el.color, set('Icon colour', (v) => { el.color = v || '#000000'; }), { palette: [E.doc.theme.accent, E.doc.theme.color, E.doc.theme.accent2] })),
-      /stroke=/.test(el.svg) ? ui.row('Line width', ui.slider(el.sw || 2, set('Icon line width', (v) => { el.sw = v; }), { min: 0.5, max: 4, step: 0.25 })) : null,
-      h('button', { class: 'ui-btn ui-small', text: 'Replace icon…', onClick: () => PZ.edDialogs.icons({ onPick: (svg, name) => live('Replace icon', () => { el.svg = svg; el.name = name; }, true) }) }));
+      ui.row(t('Colour'), ui.color(el.color, set('Icon colour', (v) => { el.color = v || '#000000'; }), { palette: [E.doc.theme.accent, E.doc.theme.color, E.doc.theme.accent2] })),
+      /stroke=/.test(el.svg) ? ui.row(t('Line width'), ui.slider(el.sw || 2, set('Icon line width', (v) => { el.sw = v; }), { min: 0.5, max: 4, step: 0.25 })) : null,
+      h('button', { class: 'ui-btn ui-small', text: t('Replace icon…'), onClick: () => PZ.edDialogs.icons({ onPick: (svg, name) => live('Replace icon', () => { el.svg = svg; el.name = name; }, true) }) }));
   }
 
   function positionControls(el) {
     const n = (key, label) => ui.number(el[key], set('Position', (v) => { el[key] = Math.round(v); if (key === 'h' && el.type === 'text') el.autoH = false; }), { label, step: 1 });
     return h('div', null,
-      h('div', { class: 'ed-grid2' }, n('x', 'X'), n('y', 'Y'), n('w', 'W'), n('h', 'H')),
-      ui.row('Rotation', ui.number(el.rot, set('Rotate', (v) => { el.rot = v % 360; }), { min: -360, max: 360, unit: '°' })),
-      ui.row('Opacity', ui.slider(Math.round(el.opacity * 100), set('Opacity', (v) => { el.opacity = v / 100; }), { min: 0, max: 100, fmt: (v) => v + '%' })),
-      ui.row('Align', h('div', { class: 'ui-btn-group' },
-        ui.iconBtn('align-left', 'Align left', () => E.align('left')), ui.iconBtn('align-center', 'Center horizontally', () => E.align('hcenter')), ui.iconBtn('align-right', 'Align right', () => E.align('right')),
-        ui.iconBtn('valign-top', 'Align top', () => E.align('top')), ui.iconBtn('valign-middle', 'Center vertically', () => E.align('vcenter')), ui.iconBtn('valign-bottom', 'Align bottom', () => E.align('bottom')))),
-      ui.row('Layer', h('div', { class: 'ui-btn-group' },
-        ui.iconBtn('bring-front', 'Bring to front', () => E.zorder('front')), ui.iconBtn('chevron-up', 'Bring forward', () => E.zorder('forward')),
-        ui.iconBtn('chevron-down', 'Send backward', () => E.zorder('backward')), ui.iconBtn('send-back', 'Send to back', () => E.zorder('back')))));
+      h('div', { class: 'ed-grid2' }, n('x', 'X'), n('y', 'Y'), n('w', t('W')), n('h', t('H'))),
+      ui.row(t('Rotation'), ui.number(el.rot, set('Rotate', (v) => { el.rot = v % 360; }), { min: -360, max: 360, unit: '°' })),
+      ui.row(t('Opacity'), ui.slider(Math.round(el.opacity * 100), set('Opacity', (v) => { el.opacity = v / 100; }), { min: 0, max: 100, fmt: (v) => v + '%' })),
+      ui.row(t('Align'), h('div', { class: 'ui-btn-group' },
+        ui.iconBtn('align-left', t('Align left'), () => E.align('left')), ui.iconBtn('align-center', t('Center horizontally'), () => E.align('hcenter')), ui.iconBtn('align-right', t('Align right'), () => E.align('right')),
+        ui.iconBtn('valign-top', t('Align top'), () => E.align('top')), ui.iconBtn('valign-middle', t('Center vertically'), () => E.align('vcenter')), ui.iconBtn('valign-bottom', t('Align bottom'), () => E.align('bottom')))),
+      ui.row(t('Layer'), h('div', { class: 'ui-btn-group' },
+        ui.iconBtn('bring-front', t('Bring to front'), () => E.zorder('front')), ui.iconBtn('chevron-up', t('Bring forward'), () => E.zorder('forward')),
+        ui.iconBtn('chevron-down', t('Send backward'), () => E.zorder('backward')), ui.iconBtn('send-back', t('Send to back'), () => E.zorder('back')))));
   }
 
   function animControls(el) {
     const a = el.anim;
     const box = h('div');
-    const opts = [{ value: '', label: 'None' }].concat(fxOptions(['in', 'emph', 'out'], E.doc));
-    box.appendChild(ui.row('Effect', ui.select(a ? a.effect : '', opts, (v) => {
+    const opts = [{ value: '', label: t('None') }].concat(fxOptions(['in', 'emph', 'out'], E.doc));
+    box.appendChild(ui.row(t('Effect'), ui.select(a ? a.effect : '', opts, (v) => {
       live('Animation', (d, s) => {
         if (!v) { el.anim = null; return; }
         const f = PZ.getEffect(E.doc, v);
@@ -378,33 +379,33 @@
       setTimeout(() => PZ.edStage.previewAnim(el), 60);
     })));
     if (a) {
-      box.appendChild(ui.row('Start', ui.seg(a.trigger, [{ value: 'click', label: 'On click' }, { value: 'with', label: 'With prev.' }, { value: 'after', label: 'After prev.' }], set('Animation start', (v) => { a.trigger = v; }, true))));
-      box.appendChild(ui.row('Duration', ui.slider(a.duration, set('Animation duration', (v) => { a.duration = v; }), { min: 100, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
-      box.appendChild(ui.row('Delay', ui.slider(a.delay, set('Animation delay', (v) => { a.delay = v; }), { min: 0, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
-      box.appendChild(ui.row('Easing', ui.select(a.easing, easingOptions(true), set('Animation easing', (v) => { a.easing = v; }))));
+      box.appendChild(ui.row(t('Start'), ui.seg(a.trigger, [{ value: 'click', label: t('On click') }, { value: 'with', label: t('With prev.') }, { value: 'after', label: t('After prev.') }], set('Animation start', (v) => { a.trigger = v; }, true))));
+      box.appendChild(ui.row(t('Duration'), ui.slider(a.duration, set('Animation duration', (v) => { a.duration = v; }), { min: 100, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
+      box.appendChild(ui.row(t('Delay'), ui.slider(a.delay, set('Animation delay', (v) => { a.delay = v; }), { min: 0, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
+      box.appendChild(ui.row(t('Easing'), ui.select(a.easing, easingOptions(true), set('Animation easing', (v) => { a.easing = v; }))));
       box.appendChild(h('div', { class: 'ui-btn-row' },
-        h('button', { class: 'ui-btn ui-small', onClick: () => PZ.edStage.previewAnim(el) }, PZ.icon('play'), h('span', { text: 'Preview' })),
-        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ select: a.effect }) }, PZ.icon('sparkles'), h('span', { text: 'Custom…' }))));
+        h('button', { class: 'ui-btn ui-small', onClick: () => PZ.edStage.previewAnim(el) }, PZ.icon('play'), h('span', { text: t('Preview') })),
+        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ select: a.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Custom…') }))));
     }
     return box;
   }
 
   function multiPanel(els) {
-    head(els.length + ' elements', [ui.iconBtn('copy', 'Duplicate', () => E.duplicateSel()), ui.iconBtn('trash', 'Delete', () => E.deleteSel())]);
+    head(t('{n} elements', { n: els.length }), [ui.iconBtn('copy', t('Duplicate'), () => E.duplicateSel()), ui.iconBtn('trash', t('Delete'), () => E.deleteSel())]);
     pane.appendChild(ui.section('Align & distribute', h('div', null,
-      ui.row('Align', h('div', { class: 'ui-btn-group' },
-        ui.iconBtn('align-left', 'Align left', () => E.align('left')), ui.iconBtn('align-center', 'Center horizontally', () => E.align('hcenter')), ui.iconBtn('align-right', 'Align right', () => E.align('right')),
-        ui.iconBtn('valign-top', 'Align top', () => E.align('top')), ui.iconBtn('valign-middle', 'Center vertically', () => E.align('vcenter')), ui.iconBtn('valign-bottom', 'Align bottom', () => E.align('bottom')))),
-      ui.row('Distribute', h('div', { class: 'ui-btn-group' }, ui.iconBtn('align-h', 'Distribute horizontally', () => E.align('hdist')), ui.iconBtn('align-v', 'Distribute vertically', () => E.align('vdist')))),
-      ui.row('Layer', h('div', { class: 'ui-btn-group' }, ui.iconBtn('bring-front', 'Bring to front', () => E.zorder('front')), ui.iconBtn('send-back', 'Send to back', () => E.zorder('back')))))));
+      ui.row(t('Align'), h('div', { class: 'ui-btn-group' },
+        ui.iconBtn('align-left', t('Align left'), () => E.align('left')), ui.iconBtn('align-center', t('Center horizontally'), () => E.align('hcenter')), ui.iconBtn('align-right', t('Align right'), () => E.align('right')),
+        ui.iconBtn('valign-top', t('Align top'), () => E.align('top')), ui.iconBtn('valign-middle', t('Center vertically'), () => E.align('vcenter')), ui.iconBtn('valign-bottom', t('Align bottom'), () => E.align('bottom')))),
+      ui.row(t('Distribute'), h('div', { class: 'ui-btn-group' }, ui.iconBtn('align-h', t('Distribute horizontally'), () => E.align('hdist')), ui.iconBtn('align-v', t('Distribute vertically'), () => E.align('vdist')))),
+      ui.row(t('Layer'), h('div', { class: 'ui-btn-group' }, ui.iconBtn('bring-front', t('Bring to front'), () => E.zorder('front')), ui.iconBtn('send-back', t('Send to back'), () => E.zorder('back')))))));
     pane.appendChild(ui.section('Animate together', h('div', null,
-      ui.row('Effect', ui.select('', [{ value: '', label: 'Choose…' }].concat(fxOptions(['in', 'emph', 'out'], E.doc)), (v) => {
+      ui.row(t('Effect'), ui.select('', [{ value: '', label: t('Choose…') }].concat(fxOptions(['in', 'emph', 'out'], E.doc)), (v) => {
         live('Animate selection', (d, s) => {
           const base = Math.max(0, ...s.els.filter((x) => x.anim && !els.includes(x)).map((x) => x.anim.order || 0));
           els.slice().sort((p, q) => p.y - q.y || p.x - q.x).forEach((x, i) => { x.anim = v ? { effect: v, trigger: i ? 'after' : 'click', duration: (PZ.getEffect(E.doc, v) || {}).duration || 600, delay: 0, easing: '', order: base + i + 1 } : null; });
         }, true);
       })),
-      h('p', { class: 'ed-hint', text: 'One click plays them one after the other, top to bottom.' }))));
-    pane.appendChild(ui.section('Appearance', ui.row('Opacity', ui.slider(Math.round(els[0].opacity * 100), set('Opacity', (v) => els.forEach((x) => { x.opacity = v / 100; })), { min: 0, max: 100, fmt: (v) => v + '%' }))));
+      h('p', { class: 'ed-hint', text: t('One click plays them one after the other, top to bottom.') }))));
+    pane.appendChild(ui.section('Appearance', ui.row(t('Opacity'), ui.slider(Math.round(els[0].opacity * 100), set('Opacity', (v) => els.forEach((x) => { x.opacity = v / 100; })), { min: 0, max: 100, fmt: (v) => v + '%' }))));
   }
 })(window.PZ = window.PZ || {});

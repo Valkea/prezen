@@ -72,7 +72,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-slide-host .pz-el:hover { outline: calc(1.5px / var(--k, 1)) solid color-mix(in srgb, var(--sel) 60%, transparent); }
 .ed-slide-host .ed-editing-el, .ed-slide-host .ed-editing-el:hover { outline: none; cursor: text; }
 .ed-slide-host .pz-text[contenteditable='true'] { cursor: text; user-select: text; -webkit-user-select: text; caret-color: currentColor; }
-.ed-slide-host .pz-text.pz-empty::before { content: 'Type your text'; opacity: 0.35; }
+.ed-slide-host .pz-text.pz-empty::before { content: var(--pz-ph-text, 'Type your text'); opacity: 0.35; }
 .ed-overlay { position: absolute; inset: 0; pointer-events: none; }
 .ed-frame { position: absolute; box-shadow: 0 0 0 1.5px var(--sel); transform-origin: 50% 50%; }
 .ed-frame.ed-locked { box-shadow: 0 0 0 1.5px var(--muted); }
@@ -102,6 +102,8 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-zoom { display: inline-flex; align-items: center; gap: 2px; }
 .ed-zoom-btn, .ed-zoom-pct { all: unset; cursor: pointer; padding: 1px 7px; border-radius: 5px; font-variant-numeric: tabular-nums; }
 .ed-zoom-btn:hover, .ed-zoom-pct:hover { background: var(--hover); color: var(--text); }
+.ed-st-lang { all: unset; cursor: pointer; padding: 1px 7px; border-radius: 5px; font-weight: 700; letter-spacing: 0.04em; }
+.ed-st-lang:hover, .ed-st-lang:focus-visible { background: var(--hover); color: var(--text); }
 
 /* ---------------------------------------------------------------- inspector */
 .ed-inspector { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-height: 0; }
