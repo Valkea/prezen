@@ -1,0 +1,14 @@
+{
+  "name": "prezen",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Build, present and share presentations in the browser. No account, works offline, single-file HTML and PDF export.",
+  "type": "module",
+  "scripts": {
+    "dev": "node serve.mjs",
+    "build": "node build.mjs",
+    "test": "node --test tests/"
+  },
+  "engines": { "node": ">=20" },
+  "license": "MIT"
+}

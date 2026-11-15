@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="PrezEn: build, present and share presentations in your browser. No account, works offline, exports to a single HTML file or PDF.">
+<meta name="generator" content="PrezEn">
+<title>PrezEn</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%235b5bf0%22/%3E%3Cpath d=%22M9 23V9h8a5 5 0 0 1 0 10h-8%22 fill=%22none%22 stroke=%22white%22 stroke-width=%223%22/%3E%3C/svg%3E">
+<!-- Development entry point. `npm run build` inlines every file below into one self-contained HTML file (dist/). -->
+<!-- data-pz: part of the app (re-exported by the app itself) · data-player: also part of the light slideshow export -->
+<link rel="stylesheet" href="src/css/player.css" data-pz="player-css" data-player>
+<link rel="stylesheet" href="src/css/editor.css" data-pz="editor-css">
+</head>
+<body>
+<script src="src/js/core.js" data-pz="core" data-player></script>
+<script src="src/js/sanitize.js" data-pz="sanitize" data-player></script>
+<script src="src/js/model.js" data-pz="model" data-player></script>
+<script src="src/js/assets.js" data-pz="assets" data-player></script>
+<script src="src/js/icons.js" data-pz="icons" data-player></script>
+<script src="src/js/shapes.js" data-pz="shapes" data-player></script>
+<script src="src/js/effects.js" data-pz="effects" data-player></script>
+<script src="src/js/render.js" data-pz="render" data-player></script>
+<script src="src/js/player.js" data-pz="player" data-player></script>
+<script src="src/js/print.js" data-pz="print" data-player></script>
+<script src="src/js/codec.js" data-pz="codec" data-player></script>
+<script src="src/js/storage.js" data-pz="storage"></script>
+<script src="src/js/export.js" data-pz="export"></script>
+<script src="src/js/editor/ui.js" data-pz="ui"></script>
+<script src="src/js/editor/editor.js" data-pz="editor"></script>
+<script src="src/js/editor/stage.js" data-pz="stage"></script>
+<script src="src/js/editor/panels.js" data-pz="panels"></script>
+<script src="src/js/editor/dialogs.js" data-pz="dialogs"></script>
+<script src="src/js/editor/studio.js" data-pz="studio"></script>
+<script src="src/js/editor/sample.js" data-pz="sample"></script>
+<script src="src/js/boot.js" data-pz="boot" data-player></script>
+</body>
+</html>
