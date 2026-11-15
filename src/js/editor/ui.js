@@ -56,7 +56,9 @@
       if (openPop && openPop.pop === pop) openPop = null;
       if (o.onClose) o.onClose();
     };
-    const out = (e) => { if (!pop.contains(e.target) && !anchor.contains(e.target)) close(); };
+    // A click on the anchor is left to the anchor (a toggle button reopens/closes its own popover), except for
+    // context menus opened at the pointer: their anchor is a big area (the stage, a thumbnail), so it counts as outside.
+    const out = (e) => { if (!pop.contains(e.target) && (o.at || !anchor.contains(e.target))) close(); };
     const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
     setTimeout(() => { document.addEventListener('pointerdown', out, true); document.addEventListener('keydown', key, true); });
     openPop = { pop, close };
