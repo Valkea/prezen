@@ -50,7 +50,12 @@
     x = PZ.clamp(x, 8, window.innerWidth - pw - 8);
     if (y + ph > window.innerHeight - 8) y = Math.max(8, (o.at ? o.at.y : r.top - 6) - ph);
     pop.style.left = x + 'px'; pop.style.top = y + 'px';
-    const close = () => { pop.remove(); document.removeEventListener('mousedown', out, true); document.removeEventListener('keydown', key, true); if (openPop && openPop.pop === pop) openPop = null; };
+    const close = () => {
+      if (!pop.isConnected) return;
+      pop.remove(); document.removeEventListener('mousedown', out, true); document.removeEventListener('keydown', key, true);
+      if (openPop && openPop.pop === pop) openPop = null;
+      if (o.onClose) o.onClose();
+    };
     const out = (e) => { if (!pop.contains(e.target) && !anchor.contains(e.target)) close(); };
     const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
     setTimeout(() => { document.addEventListener('mousedown', out, true); document.addEventListener('keydown', key, true); });
@@ -142,6 +147,89 @@
     sel.value = value;
     sel.addEventListener('change', () => onChange(sel.value, true));
     return sel;
+  };
+
+  /**
+   * Dropdown like ui.select, but drawn by us so options can be previewed: hovering or arrowing onto an
+   * option calls o.onPreview(value); leaving the list or closing without a pick calls o.onPreview(null).
+   * o.optStyle(value) styles an option label (e.g. its own font); o.onOpen runs before the list shows;
+   * o.previewDelay (ms) waits for the pointer to settle before previewing.
+   */
+  ui.pick = function (value, options, onChange, o) {
+    o = o || {};
+    const flat = [];
+    options.forEach((x) => (x.group ? x.options : [x]).forEach((y) => flat.push(y)));
+    const labelOf = (v) => { const f = flat.find((x) => x.value === v); return f ? f.label : ''; };
+    const lab = h('span', { class: 'ui-pick-label', text: labelOf(value), style: o.optStyle ? o.optStyle(value) : null });
+    const btn = h('button', { class: 'ui-select ui-pick' + (o.cls ? ' ' + o.cls : ''), type: 'button', title: o.title || '', 'aria-haspopup': 'listbox', onMousedown: (e) => e.preventDefault() },
+      lab, PZ.icon('chevron-down'));
+    let pop = null;
+    btn.addEventListener('click', () => {
+      if (pop && pop.pop.isConnected) { pop.close(); return; }
+      open();
+    });
+    btn.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); open(); } });
+
+    function open() {
+      if (o.onOpen) o.onOpen();
+      const list = h('div', { class: 'ui-menu ui-pick-list', role: 'listbox', style: { minWidth: Math.max(200, btn.offsetWidth) + 'px' } });
+      let timer = 0, shown = null, quiet = true;
+      const preview = (v) => {
+        clearTimeout(timer);
+        if (!o.onPreview || v === shown) return;
+        const go = () => { shown = v; o.onPreview(v); };
+        if (v != null && o.previewDelay) timer = setTimeout(go, o.previewDelay); else go();
+      };
+      const item = (opt) => {
+        const b = h('button', { class: 'ui-menu-item ui-pick-item' + (opt.value === value ? ' ui-on' : ''), role: 'option', 'aria-selected': String(opt.value === value), dataset: { v: opt.value },
+          onClick: () => {
+            pop.close(); // ends the preview first, then the pick is applied for real
+            if (opt.value !== value) { value = opt.value; lab.textContent = opt.label; if (o.optStyle) Object.assign(lab.style, o.optStyle(value)); }
+            onChange(opt.value, true);
+          } },
+          h('span', { class: 'ui-menu-label', text: opt.label, style: o.optStyle ? o.optStyle(opt.value) : null }));
+        b.addEventListener('mouseenter', () => {
+          quiet = false;
+          if (document.activeElement === b) preview(opt.value); else b.focus({ preventScroll: true });
+        });
+        b.addEventListener('focus', () => { if (!quiet) preview(opt.value); });
+        return b;
+      };
+      for (const x of options) {
+        if (x.group) { list.appendChild(h('div', { class: 'ui-menu-head', text: x.group })); x.options.forEach((y) => list.appendChild(item(y))); } else list.appendChild(item(x));
+      }
+      list.addEventListener('mouseleave', () => { if (list.contains(document.activeElement)) btn.focus({ preventScroll: true }); preview(null); });
+      list.addEventListener('keydown', (e) => {
+        e.stopPropagation(); // keep the editor's shortcuts (arrows move elements, Enter edits) out of the list
+        const btns = PZ.$$('.ui-pick-item', list);
+        const i = btns.indexOf(document.activeElement);
+        let j = -1;
+        if (e.key === 'ArrowDown') j = Math.min(btns.length - 1, i + 1);
+        else if (e.key === 'ArrowUp') j = Math.max(0, i - 1);
+        else if (e.key === 'Home') j = 0;
+        else if (e.key === 'End') j = btns.length - 1;
+        else if (e.key === 'Tab') { e.preventDefault(); pop.close(); btn.focus(); return; }
+        else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+          const ch = e.key.toLowerCase();
+          const order = btns.slice(i + 1).concat(btns.slice(0, i + 1));
+          const hit = order.find((b) => b.textContent.trim().replace(/^★\s*/, '').toLowerCase().startsWith(ch));
+          if (hit) j = btns.indexOf(hit);
+        }
+        if (j < 0) return;
+        e.preventDefault();
+        quiet = false;
+        btns[j].focus();
+        btns[j].scrollIntoView({ block: 'nearest' });
+      });
+      pop = ui.popover(btn, list, { cls: 'ui-pick-pop', onClose: () => {
+        clearTimeout(timer);
+        if (shown != null && o.onPreview) { shown = null; o.onPreview(null); } // undo the preview
+        if (btn.isConnected && (document.activeElement === document.body || !document.activeElement)) btn.focus({ preventScroll: true });
+      } });
+      const cur = list.querySelector('.ui-pick-item.ui-on') || list.querySelector('.ui-pick-item');
+      if (cur) { cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: 'center' }); }
+    }
+    return btn;
   };
 
   ui.toggle = function (value, onChange, label) {

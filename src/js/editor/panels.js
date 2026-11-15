@@ -122,6 +122,8 @@
     { group: t('Always available'), options: PZ.FONTS.filter((f) => f.google == null).map((f) => ({ value: f.name, label: t(f.name) })) },
     { group: t('Google Fonts (online, embeddable)'), options: PZ.FONTS.filter((f) => f.google != null).map((f) => ({ value: f.name, label: f.name })) },
   ];
+  /** Picker options shared by font fields: each name drawn in its own font (Google ones load when the list opens). */
+  const fontPick = { optStyle: (v) => ({ fontFamily: PZ.fontStack(v) }), onOpen: () => PZ.FONTS.forEach((f) => PZ.loadFont(f.name)) };
 
   I.render = function () {
     if (!pane) return;
@@ -165,11 +167,12 @@
     const tr = s.transition;
     const fx = PZ.getEffect(E.doc, tr.effect);
     pane.appendChild(ui.section('Transition into this slide', h('div', null,
-      ui.row(t('Effect'), ui.select(tr.effect, fxOptions(['transition'], E.doc), (v) => live('Transition', () => { tr.effect = v; const f = PZ.getEffect(E.doc, v); tr.duration = f && f.duration != null ? f.duration || 0 : 700; tr.easing = ''; }, true))),
+      ui.row(t('Effect'), ui.pick(tr.effect, fxOptions(['transition'], E.doc), (v) => live('Transition', () => { tr.effect = v; Object.assign(tr, transitionDefaults(v)); }, true),
+        { previewDelay: 250, onPreview: (v) => (v ? previewTransition(Object.assign({ effect: v }, transitionDefaults(v))) : stopTransition()) })),
       fx && fx.id !== 'none' ? ui.row(t('Duration'), ui.slider(tr.duration, set('Transition', (v) => { tr.duration = v; }), { min: 100, max: 3000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })) : null,
       fx && fx.id !== 'none' ? ui.row(t('Easing'), ui.select(tr.easing, easingOptions(true), set('Transition', (v) => { tr.easing = v; }))) : null,
       h('div', { class: 'ui-btn-row' },
-        h('button', { class: 'ui-btn ui-small', onClick: () => previewTransition() }, PZ.icon('play'), h('span', { text: t('Preview') })),
+        h('button', { class: 'ui-btn ui-small', onClick: () => previewTransition(tr) }, PZ.icon('play'), h('span', { text: t('Preview') })),
         h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Apply to all'), onClick: () => E.commit('Transition on all slides', (d) => d.slides.forEach((x) => { x.transition = PZ.clone(tr); })) }),
         h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') }))))));
 
@@ -212,10 +215,20 @@
     return t('Image');
   }
 
-  /** Play this slide's transition on the stage (from the previous slide). */
-  function previewTransition() {
+  /** Duration and easing a transition gets when its effect is chosen. */
+  function transitionDefaults(effect) {
+    const f = PZ.getEffect(E.doc, effect);
+    return { duration: f && f.duration != null ? f.duration || 0 : 700, easing: '' };
+  }
+
+  let transBox = null;
+  function stopTransition() { if (transBox) { transBox.remove(); transBox = null; } }
+
+  /** Play a transition {effect, duration, easing} into this slide on the stage (from the previous slide). */
+  function previewTransition(tr) {
+    stopTransition();
     const stage = PZ.$('.ed-stage');
-    if (!stage) return;
+    if (!stage || !tr.effect || tr.effect === 'none') return;
     const k = PZ.edStage.scale();
     const box = h('div', { class: 'ed-trans-preview', style: { width: E.doc.w + 'px', height: E.doc.h + 'px', transform: `scale(${k})` } });
     const prev = E.doc.slides[E.cur - 1] || { bg: { type: 'color', color: '#222' }, els: [] };
@@ -223,9 +236,9 @@
     const inn = h('div', { class: 'pz-layer' }, PZ.renderSlide(E.doc, E.slide(), 'play'));
     box.append(out, inn);
     stage.appendChild(box);
-    const tr = E.slide().transition;
+    transBox = box;
     const run = PZ.runTransition({ inLayer: inn, outLayer: out, effect: PZ.getEffect(E.doc, tr.effect), duration: tr.duration, easing: tr.easing, w: E.doc.w, h: E.doc.h, perspective: box });
-    run.finished.then(() => setTimeout(() => box.remove(), 250));
+    run.finished.then(() => setTimeout(() => { box.remove(); if (transBox === box) transBox = null; }, 250));
   }
 
   // ---------------------------------------------------------------- element
@@ -259,7 +272,11 @@
       if (done) E.refresh('inspector');
     };
     if (!isText) box.appendChild(h('p', { class: 'ed-hint', text: t('Double-click the shape (or press Enter) to type in it.') }));
-    box.appendChild(ui.row(t('Font'), ui.select(st.font, fontOptions(), styleOrSel('Font', 'font', 'fontName'), { cls: 'ed-font-select' })));
+    box.appendChild(ui.row(t('Font'), ui.pick(st.font, fontOptions(), styleOrSel('Font', 'font', 'fontName'), Object.assign({
+      cls: 'ed-font-select',
+      // with words selected the pick only restyles them, so a whole-box preview would mislead
+      onPreview: (v) => { if (!rich()) PZ.edStage.previewFont(el, v); },
+    }, fontPick))));
     box.appendChild(ui.row(t('Size'), ui.number(st.size, (v, done) => {
       if (rich()) { if (done) PZ.edStage.execText('fontSizePx', v); return; }
       live('Font size', () => { st.size = v; });
@@ -369,7 +386,7 @@
     const a = el.anim;
     const box = h('div');
     const opts = [{ value: '', label: t('None') }].concat(fxOptions(['in', 'emph', 'out'], E.doc));
-    box.appendChild(ui.row(t('Effect'), ui.select(a ? a.effect : '', opts, (v) => {
+    box.appendChild(ui.row(t('Effect'), ui.pick(a ? a.effect : '', opts, (v) => {
       live('Animation', (d, s) => {
         if (!v) { el.anim = null; return; }
         const f = PZ.getEffect(E.doc, v);
@@ -377,7 +394,7 @@
         el.anim = Object.assign({ trigger: 'click', delay: 0, easing: '', order: maxOrder + 1 }, el.anim || {}, { effect: v, duration: (f && f.duration) || 600 });
       }, true);
       setTimeout(() => PZ.edStage.previewAnim(el), 60);
-    })));
+    }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect([el], v) })));
     if (a) {
       box.appendChild(ui.row(t('Start'), ui.seg(a.trigger, [{ value: 'click', label: t('On click') }, { value: 'with', label: t('With prev.') }, { value: 'after', label: t('After prev.') }], set('Animation start', (v) => { a.trigger = v; }, true))));
       box.appendChild(ui.row(t('Duration'), ui.slider(a.duration, set('Animation duration', (v) => { a.duration = v; }), { min: 100, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
@@ -399,12 +416,12 @@
       ui.row(t('Distribute'), h('div', { class: 'ui-btn-group' }, ui.iconBtn('align-h', t('Distribute horizontally'), () => E.align('hdist')), ui.iconBtn('align-v', t('Distribute vertically'), () => E.align('vdist')))),
       ui.row(t('Layer'), h('div', { class: 'ui-btn-group' }, ui.iconBtn('bring-front', t('Bring to front'), () => E.zorder('front')), ui.iconBtn('send-back', t('Send to back'), () => E.zorder('back')))))));
     pane.appendChild(ui.section('Animate together', h('div', null,
-      ui.row(t('Effect'), ui.select('', [{ value: '', label: t('Choose…') }].concat(fxOptions(['in', 'emph', 'out'], E.doc)), (v) => {
+      ui.row(t('Effect'), ui.pick('', [{ value: '', label: t('Choose…') }].concat(fxOptions(['in', 'emph', 'out'], E.doc)), (v) => {
         live('Animate selection', (d, s) => {
           const base = Math.max(0, ...s.els.filter((x) => x.anim && !els.includes(x)).map((x) => x.anim.order || 0));
           els.slice().sort((p, q) => p.y - q.y || p.x - q.x).forEach((x, i) => { x.anim = v ? { effect: v, trigger: i ? 'after' : 'click', duration: (PZ.getEffect(E.doc, v) || {}).duration || 600, delay: 0, easing: '', order: base + i + 1 } : null; });
         }, true);
-      })),
+      }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect(els.slice().sort((p, q) => p.y - q.y || p.x - q.x), v) })),
       h('p', { class: 'ed-hint', text: t('One click plays them one after the other, top to bottom.') }))));
     pane.appendChild(ui.section('Appearance', ui.row(t('Opacity'), ui.slider(Math.round(els[0].opacity * 100), set('Opacity', (v) => els.forEach((x) => { x.opacity = v / 100; })), { min: 0, max: 100, fmt: (v) => v + '%' }))));
   }

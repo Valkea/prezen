@@ -70,6 +70,7 @@
     host.appendChild(PZ.renderSlide(E.doc, E.slide(), 'edit'));
     layout();
     fitTexts();
+    if (fontPreview) { const el = E.find(fontPreview.id); if (el && el.style) applyFontPreview(el); else fontPreview = null; }
   };
 
   function nodeOf(id) { return host.querySelector(`.pz-el[data-id="${CSS.escape(id)}"]`); }
@@ -458,9 +459,43 @@
 
   /** Preview an element animation on the stage. */
   S.previewAnim = function (el) {
-    const node = nodeOf(el.id);
-    if (!node || !el.anim) return;
-    const a = PZ.animateElement(node, el.anim, E.doc, {});
-    if (a) a.finished.catch(() => {}).then(() => a.cancel());
+    S.previewEffect([el], el.anim && el.anim.effect);
   };
+
+  let running = [];
+  /**
+   * Play an effect on elements without changing the doc (hover preview in the inspector). Several
+   * elements play one after the other, like "Animate together". A falsy effect just stops the preview.
+   */
+  S.previewEffect = function (els, effect) {
+    running.forEach((a) => a.cancel());
+    running = [];
+    if (!effect) return;
+    const fx = PZ.getEffect(E.doc, effect);
+    if (!fx) return;
+    let at = 0;
+    for (const el of els) {
+      const node = nodeOf(el.id);
+      if (!node) continue;
+      const anim = Object.assign({ delay: 0, easing: '' }, el.anim && el.anim.effect === effect ? el.anim : { duration: fx.duration || 600 }, { effect });
+      const a = PZ.animateElement(node, anim, E.doc, { delay: at + (anim.delay || 0) });
+      if (!a) continue;
+      at += (anim.delay || 0) + (anim.duration || 600);
+      running.push(a);
+      a.finished.catch(() => {}).then(() => { a.cancel(); running = running.filter((x) => x !== a); });
+    }
+  };
+
+  let fontPreview = null; // {id, name}: kept so a re-render (e.g. when the hovered web font finishes loading) shows it again
+  /** Show a text element in another font without changing the doc; null puts its own font back. */
+  S.previewFont = function (el, name) {
+    fontPreview = name ? { id: el.id, name } : null;
+    if (name) PZ.loadFont(name);
+    applyFontPreview(el);
+  };
+  function applyFontPreview(el) {
+    const node = nodeOf(el.id);
+    const tx = node && node.querySelector('.pz-text');
+    if (tx) tx.style.fontFamily = PZ.fontStack(fontPreview && fontPreview.id === el.id ? fontPreview.name : el.style.font);
+  }
 })(window.PZ = window.PZ || {});

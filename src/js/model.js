@@ -78,12 +78,15 @@
 
   /** Inject <link> tags for the Google fonts a doc uses (no-op when already present or offline). */
   PZ.loadFonts = function (doc, targetDoc) {
+    for (const name of PZ.usedFonts(doc)) PZ.loadFont(name, targetDoc);
+  };
+
+  /** Inject the <link> for one Google font (no-op for system stacks or when already there). */
+  PZ.loadFont = function (name, targetDoc) {
     const d = targetDoc || document;
-    for (const name of PZ.usedFonts(doc)) {
-      const url = PZ.googleFontUrl(name);
-      if (!url || d.querySelector(`link[data-pz-font="${CSS.escape(name)}"], style[data-pz-font="${CSS.escape(name)}"]`)) continue;
-      d.head.appendChild(PZ.h('link', { rel: 'stylesheet', href: url, 'data-pz-font': name }));
-    }
+    const url = PZ.googleFontUrl(name);
+    if (!url || d.querySelector(`link[data-pz-font="${CSS.escape(name)}"], style[data-pz-font="${CSS.escape(name)}"]`)) return;
+    d.head.appendChild(PZ.h('link', { rel: 'stylesheet', href: url, 'data-pz-font': name }));
   };
 
   PZ.EASINGS = [
