@@ -6,7 +6,7 @@
   PZ.VERSION = '0.1.0';
   PZ.APP = 'PrezEn';
   // Where the hosted app lives. Share links point here when the app runs from a local file.
-  PZ.PUBLIC_URL = 'https://valkea.github.io/Prezen/';
+  PZ.PUBLIC_URL = 'https://valkea.github.io/prezen/';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   PZ.SVG_NS = SVG_NS;

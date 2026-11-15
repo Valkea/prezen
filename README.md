@@ -4,7 +4,7 @@
 
 *Build, present and share presentations in your browser. No account. One file. Works offline.*
 
-[Open the app](https://valkea.github.io/Prezen/) · download `PrezEn.html` from the site and it runs from any folder or flashdrive
+[Open the app](https://valkea.github.io/prezen/) · download `PrezEn.html` from the site and it runs from any folder or flashdrive
 
 </div>
 
@@ -69,7 +69,7 @@ npm run build      # dist/index.html and dist/PrezEn.html (identical single file
 
 Every push to `main` runs the tests, builds, and deploys `dist/` to GitHub Pages
 (`.github/workflows/pages.yml`; enable *Settings → Pages → Source: GitHub Actions* once).
-If the repository is not `Valkea/Prezen`, update `PZ.PUBLIC_URL` in `src/js/core.js`: share links
+If the repository is not `Valkea/prezen`, update `PZ.PUBLIC_URL` in `src/js/core.js`: share links
 created from a local file point there.
 
 ### How it fits together
