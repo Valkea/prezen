@@ -66,15 +66,24 @@
     m = ui.modal({ title: o.title || t('Add an image'), content: tabs.el, wide: true });
   };
 
-  /** Icon markup from Iconify's JSON API (CORS-enabled), following one level of alias. */
-  async function iconifySvg(prefix, name) {
-    const data = await (await fetch(`https://api.iconify.design/${prefix}.json?icons=${encodeURIComponent(name)}`)).json();
-    let ic = data.icons && data.icons[name];
-    const alias = !ic && data.aliases && data.aliases[name];
-    if (alias) ic = Object.assign({}, data.icons[alias.parent], alias);
-    if (!ic || typeof ic.body !== 'string') throw new Error(t('Icon not found'));
-    const w = ic.width || data.width || 16, hh = ic.height || data.height || 16;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${+ic.left || 0} ${+ic.top || 0} ${+w} ${+hh}">${ic.body}</svg>`;
+  /** Several icons of one set from Iconify's JSON API (CORS-enabled) in a single request.
+   *  Resolves to { name: sanitized svg markup }, following one level of alias. One request per
+   *  icon set (instead of one per icon) keeps us under Iconify's rate limit. */
+  async function iconifySet(prefix, names) {
+    const res = await fetch(`https://api.iconify.design/${prefix}.json?icons=${names.map(encodeURIComponent).join(',')}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const out = {};
+    for (const name of names) {
+      let ic = data.icons && data.icons[name];
+      const alias = !ic && data.aliases && data.aliases[name];
+      if (alias && data.icons) ic = Object.assign({}, data.icons[alias.parent], alias);
+      if (!ic || typeof ic.body !== 'string') continue;
+      const w = ic.width || data.width || 16, hh = ic.height || data.height || 16;
+      const svg = PZ.sanitizeSvg(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${+ic.left || 0} ${+ic.top || 0} ${+w} ${+hh}">${ic.body}</svg>`);
+      if (svg) out[name] = svg;
+    }
+    return out;
   }
 
   // ---------------------------------------------------------------- icons (built-in + Iconify search)
@@ -107,18 +116,27 @@
         const data = await res.json();
         grid.textContent = '';
         status.textContent = t('{n} icons from Iconify (check each icon set’s license for commercial use).', { n: (data.icons || []).length });
+        const bySet = new Map();
         for (const full of data.icons || []) {
           if (!/^[\w-]+:[\w-]+$/.test(full)) continue;
           const [prefix, name] = full.split(':');
-          const url = `https://api.iconify.design/${prefix}/${name}.svg`;
-          grid.appendChild(h('button', { class: 'dlg-icon', title: full, onClick: async () => {
-            try {
-              const svg = PZ.sanitizeSvg(await iconifySvg(prefix, name));
-              if (!svg) throw new Error(t('Invalid icon'));
-              m.close(); o.onPick(svg, full);
-            } catch (e) { PZ.toast(t('Could not load this icon.'), { type: 'error' }); }
-          } }, h('img', { src: url + '?color=%23444', alt: full, loading: 'lazy', referrerpolicy: 'no-referrer' })));
+          const b = h('button', { class: 'dlg-icon', title: full, disabled: true });
+          grid.appendChild(b);
+          if (!bySet.has(prefix)) bySet.set(prefix, []);
+          bySet.get(prefix).push({ name, full, b });
         }
+        await Promise.all([...bySet].map(async ([prefix, items]) => {
+          let svgs = {};
+          try { svgs = await iconifySet(prefix, items.map((it) => it.name)); } catch (e) { /* leave buttons empty */ }
+          for (const { name, full, b } of items) {
+            const svg = svgs[name];
+            if (!svg) { b.remove(); continue; }
+            b.innerHTML = svg;
+            b.disabled = false;
+            b.addEventListener('click', () => { m.close(); o.onPick(svg, full); });
+          }
+        }));
+        if (!grid.querySelector('.dlg-icon')) status.textContent = t('Online search unavailable (offline?).');
       } catch (e) { status.textContent = t('Online search unavailable (offline?).'); }
     };
     search.addEventListener('input', () => showBuiltin(search.value.trim().toLowerCase()));

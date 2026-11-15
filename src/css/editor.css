@@ -129,7 +129,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-shape-grid { display: grid; grid-template-columns: repeat(5, 54px); gap: 4px; }
 .ed-shape-btn { all: unset; width: 54px; height: 46px; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; }
 .ed-shape-btn:hover { background: var(--hover); }
-.ed-shape-btn svg { width: 44px; height: 34px; overflow: visible; }
+.ed-shape-btn svg { position: static; width: 44px; height: 34px; overflow: visible; }
 .ed-layout-grid { display: grid; grid-template-columns: repeat(3, 132px); gap: 10px; }
 .ed-layout-btn { all: unset; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-size: 12px; color: var(--muted); text-align: center; }
 .ed-layout-btn .pz-thumb { border-radius: 5px; box-shadow: 0 0 0 1px var(--line-2); }
@@ -251,8 +251,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .dlg-icon-cat { grid-column: 1 / -1; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 2px 2px; }
 .dlg-icon { all: unset; height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; color: var(--text); }
 .dlg-icon:hover { background: var(--hover); color: var(--accent); }
-.dlg-icon svg, .dlg-icon img { width: 26px; height: 26px; }
-@media (prefers-color-scheme: dark) { .dlg-icon img { filter: invert(1); } }
+.dlg-icon svg { width: 26px; height: 26px; }
 .dlg-link { word-break: break-all; margin-top: 10px; }
 .dlg-card { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
 .dlg-card > .pz-ico { width: 26px; height: 26px; color: var(--accent); }
