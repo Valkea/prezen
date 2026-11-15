@@ -52,13 +52,13 @@
     pop.style.left = x + 'px'; pop.style.top = y + 'px';
     const close = () => {
       if (!pop.isConnected) return;
-      pop.remove(); document.removeEventListener('mousedown', out, true); document.removeEventListener('keydown', key, true);
+      pop.remove(); document.removeEventListener('pointerdown', out, true); document.removeEventListener('keydown', key, true);
       if (openPop && openPop.pop === pop) openPop = null;
       if (o.onClose) o.onClose();
     };
     const out = (e) => { if (!pop.contains(e.target) && !anchor.contains(e.target)) close(); };
     const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
-    setTimeout(() => { document.addEventListener('mousedown', out, true); document.addEventListener('keydown', key, true); });
+    setTimeout(() => { document.addEventListener('pointerdown', out, true); document.addEventListener('keydown', key, true); });
     openPop = { pop, close };
     return openPop;
   };
