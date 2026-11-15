@@ -63,14 +63,16 @@
         const out = h('div', { class: 'pz-layer' }, PZ.renderSlide(E.doc, a, 'play'));
         const inn = h('div', { class: 'pz-layer' }, PZ.renderSlide(E.doc, b, 'play'));
         inner.append(out, inn);
-        const r = PZ.runTransition({ inLayer: inn, outLayer: out, effect: fx, w: E.doc.w, h: E.doc.h, perspective: inner, duration: use.duration, easing: use.easing });
+        const r = PZ.runTransition({ inLayer: inn, outLayer: out, effect: fx, w: E.doc.w, h: E.doc.h, perspective: inner, duration: use.duration, easing: use.easing, doc: E.doc });
         done = r.finished.then(() => out.remove());
       } else {
         const slide = sampleElementSlide();
         const s = PZ.renderSlide(E.doc, slide, 'play');
         inner.appendChild(s);
         const node = s.querySelector('.pz-el');
-        const a = PZ.animate(node, fx.frames, { w: E.doc.w, h: E.doc.h, origin: fx.origin, duration: use.duration, easing: use.easing || fx.easing || 'smooth' });
+        const timing = { duration: use.duration, easing: use.easing || fx.easing || 'smooth' };
+        const a = PZ.animate(node, fx.frames, Object.assign({ w: E.doc.w, h: E.doc.h, origin: fx.origin }, timing));
+        if (a) PZ.elementScene(node, fx.scene, E.doc, timing);
         done = a ? a.finished.catch(() => {}).then(() => a.cancel()) : Promise.resolve();
       }
       done.then(() => { if (loop && m.el.isConnected) loopTimer = setTimeout(play, 900); });
@@ -80,12 +82,19 @@
     // ---- library list
     function renderList() {
       listEl.textContent = '';
-      const builtins = Object.values(PZ.EFFECTS).filter((e) => e.kind === kind);
+      const all = Object.values(PZ.EFFECTS).filter((e) => e.kind === kind);
       const custom = Object.values(E.doc.effects || {}).filter((e) => e.kind === kind);
       if (custom.length) listEl.appendChild(h('div', { class: 'st-list-head', text: t('Your effects') }));
       custom.forEach((e) => listEl.appendChild(row(e, true)));
       listEl.appendChild(h('div', { class: 'st-list-head', text: t('Library') }));
-      builtins.forEach((e) => listEl.appendChild(row(e, false)));
+      all.filter((e) => !e.fun).forEach((e) => listEl.appendChild(row(e, false)));
+      // fun pack: the switch is the same as Menu → Fun effects
+      const funOn = E.funOn();
+      listEl.appendChild(h('div', { class: 'st-list-head st-fun-head' }, h('span', { text: '✨ ' + t('Fun pack') }),
+        ui.toggle(funOn, (v) => { E.setFun(v, true); renderList(); })));
+      const funny = all.filter((e) => e.fun && (funOn || e.id === inUse() || (fx && fx.id === e.id)));
+      funny.forEach((e) => listEl.appendChild(row(e, false)));
+      if (!funOn) listEl.appendChild(h('p', { class: 'st-fun-hint', text: t('Explosions, turtles, confetti, rockets… for lively presentations.') }));
       listEl.appendChild(h('button', { class: 'ui-btn ui-small st-new', onClick: () => createFrom(null) }, PZ.icon('plus'), h('span', { text: t('New blank effect') })));
     }
     function row(e, custom) {
@@ -234,6 +243,12 @@
       const isPreset = PZ.EASINGS.some((e) => e.id === fx.easing) || !fx.easing;
       const bez = ui.text(isPreset ? '' : fx.easing, (v, done) => { if (done) { fx.easing = v.trim(); save(); } }, { mono: true, placeholder: 'cubic-bezier(.2,.8,.2,1)' });
       editor.appendChild(ui.row(t('Default easing'), ui.select(isPreset ? fx.easing || 'smooth' : 'custom', presets, (v) => { if (v !== 'custom') { fx.easing = v; save(); } else bez.focus(); }), bez));
+      const sceneKind = fx.kind === 'transition' ? 'transition' : 'element';
+      const scenes = Object.values(PZ.SCENES).filter((sc) => sc.kind === sceneKind);
+      if (E.funOn() || fx.scene) {
+        editor.appendChild(ui.row(t('Particles'), ui.select(fx.scene || '', [{ value: '', label: t('None') }].concat(scenes.map((sc) => ({ value: sc.id, label: t(sc.name) }))),
+          (v) => { if (v) fx.scene = v; else delete fx.scene; save(); })));
+      }
       if (fx.kind === 'transition') {
         editor.appendChild(ui.row(t('Layers'), ui.toggle(fx.inTop !== false, (v) => { fx.inTop = v; save(); }, t('Incoming slide on top'))));
         editor.appendChild(framesTable(t('Incoming slide'), fx.in, save, 'inOrigin'));

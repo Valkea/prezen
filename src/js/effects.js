@@ -4,8 +4,9 @@
  *   { id, name, kind:'transition'|'in'|'emph'|'out', duration, easing,
  *     in:[frame], out:[frame], inTop:true, inOrigin:'50% 50%', outOrigin:'50% 50%' }   (transition)
  *   { id, name, kind:'in'|'emph'|'out', duration, easing, frames:[frame], origin }      (element)
- * frame = { offset?, opacity, x, y (percent of the slide), scale, rotate, rotateX, rotateY (deg), blur (px),
- *           clip ('inset(…)' | 'circle(…)' | 'ellipse(…)' | 'polygon(…)'), easing }
+ * frame = { offset?, opacity, x, y (percent of the slide), scale, scaleX, scaleY (stretch), rotate, rotateX, rotateY (deg),
+ *           blur (px), clip ('inset(…)' | 'circle(…)' | 'ellipse(…)' | 'polygon(…)'), easing }
+ * Any effect may also name a particle `scene` (PZ.SCENES, filled by fun.js): drawn on top while it plays.
  */
 (function (PZ) {
   'use strict';
@@ -16,6 +17,8 @@
     { k: 'x', name: 'Move X %', def: 0, step: 1 },
     { k: 'y', name: 'Move Y %', def: 0, step: 1 },
     { k: 'scale', name: 'Scale', def: 1, step: 0.05, min: 0 },
+    { k: 'scaleX', name: 'Stretch X', def: 1, step: 0.05 },
+    { k: 'scaleY', name: 'Stretch Y', def: 1, step: 0.05 },
     { k: 'rotate', name: 'Rotate°', def: 0, step: 1 },
     { k: 'rotateX', name: '3D tilt X°', def: 0, step: 1 },
     { k: 'rotateY', name: '3D turn Y°', def: 0, step: 1 },
@@ -92,6 +95,8 @@
   A('out', 'blur-out', 'Blur out', [{}, { blur: 20, opacity: 0 }]);
   A('out', 'shrink', 'Shrink away', [{}, { scale: 0, rotate: 90, opacity: 0 }], { easing: 'back-in' });
   PZ.EFFECTS = L;
+  /** Particle scenes { id: { kind: 'transition'|'element', name, run(ctx) } }, registered by fun.js. */
+  PZ.SCENES = PZ.SCENES || {};
 
   /** Effects of a kind: built-ins followed by the doc's custom ones. */
   PZ.effectList = function (doc, kind) {
@@ -125,6 +130,7 @@
       o.in = frames(e.in); o.out = frames(e.out); o.inTop = e.inTop !== false;
       o.inOrigin = origin(e.inOrigin); o.outOrigin = origin(e.outOrigin); o.perspective = PZ.clamp(PZ.num(e.perspective, 0), 0, 10000);
     } else { o.frames = frames(e.frames); o.origin = origin(e.origin); }
+    if (typeof e.scene === 'string' && /^[\w-]{1,40}$/.test(e.scene)) o.scene = e.scene; // unknown scenes are ignored when playing
     return o;
   };
 
@@ -134,6 +140,7 @@
     if (!fr || !fr.length) return [];
     if (fr.length === 1) fr = [fr[0], {}];
     const useBlur = fr.some((f) => f.blur), clipAt = fr.map((f) => f.clip || null);
+    const useStretch = fr.some((f) => f.scaleX != null || f.scaleY != null);
     const useClip = clipAt.some(Boolean);
     if (useClip) { // frames without a clip borrow the nearest one so every keyframe has the same shape
       for (let i = 0; i < clipAt.length; i++) if (!clipAt[i]) clipAt[i] = clipAt.slice(0, i).reverse().find(Boolean) || clipAt.slice(i).find(Boolean);
@@ -141,7 +148,8 @@
     return fr.map((f, i) => {
       const k = {
         opacity: f.opacity == null ? 1 : f.opacity,
-        transform: `translate(${PZ.round(((f.x || 0) * w) / 100, 1)}px, ${PZ.round(((f.y || 0) * h) / 100, 1)}px) rotate(${f.rotate || 0}deg) rotateX(${f.rotateX || 0}deg) rotateY(${f.rotateY || 0}deg) scale(${f.scale == null ? 1 : f.scale})`,
+        transform: `translate(${PZ.round(((f.x || 0) * w) / 100, 1)}px, ${PZ.round(((f.y || 0) * h) / 100, 1)}px) rotate(${f.rotate || 0}deg) rotateX(${f.rotateX || 0}deg) rotateY(${f.rotateY || 0}deg) scale(${f.scale == null ? 1 : f.scale})` +
+          (useStretch ? ` scale(${f.scaleX == null ? 1 : f.scaleX}, ${f.scaleY == null ? 1 : f.scaleY})` : ''),
       };
       if (f.offset != null) k.offset = f.offset;
       if (useBlur) k.filter = `blur(${f.blur || 0}px)`;
@@ -163,8 +171,29 @@
   };
 
   /**
+   * Run a particle scene on a fresh layer appended to `parent` (w × h logical px). o: { w, h, duration, delay, easing,
+   * box: {x, y, w, h} of the animated element (element scenes), doc }. Returns the scene's animations, or [] when
+   * there is no such scene. The layer removes itself once they are all over.
+   */
+  PZ.runScene = function (id, kind, parent, o) {
+    const sc = PZ.SCENES[id];
+    if (!sc || sc.kind !== kind || !parent || !parent.appendChild || !document.createElement('div').animate) return [];
+    const layer = document.createElement('div');
+    layer.className = 'pz-fx' + (kind === 'element' ? ' pz-fx-el' : '');
+    layer.style.width = o.w + 'px'; layer.style.height = o.h + 'px';
+    parent.appendChild(layer);
+    const ctx = Object.assign({}, o, { layer, D: Math.max(1, o.duration || 1), delay: o.delay || 0, easing: PZ.easing(o.easing), anims: [] });
+    try { sc.run(ctx); } catch (e) { /* decoration only: never break the show */ }
+    const anims = ctx.anims;
+    if (!anims.length) { layer.remove(); return []; }
+    Promise.all(anims.map((a) => a.finished.catch(() => {}))).then(() => layer.remove());
+    return anims;
+  };
+
+  /**
    * Play a slide transition between two stacked layers (both W×H, absolutely positioned).
    * reverse: going back, the current slide's transition is rewound (the old "in" layer leaves, the old "out" one returns).
+   * Effects with a particle scene play forward instead (an explosion played backwards makes no sense).
    * Returns { finished: Promise, finish() }.
    */
   PZ.runTransition = function (o) {
@@ -176,13 +205,15 @@
     const t = { w: o.w, h: o.h, duration, easing };
     if (!duration || fx.id === 'none') return { finished: Promise.resolve(), finish() {} };
     if (o.perspective != null) o.perspective.style.perspective = (fx.perspective || Math.max(o.w, o.h) * 2) + 'px';
-    if (!o.reverse) {
+    const scene = fx.scene && PZ.SCENES[fx.scene];
+    if (!o.reverse || scene) {
       o.inLayer.style.zIndex = inTop ? 2 : 1; o.outLayer.style.zIndex = inTop ? 1 : 2;
       anims.push(PZ.animate(o.inLayer, fx.in, Object.assign({ origin: fx.inOrigin }, t)), PZ.animate(o.outLayer, fx.out, Object.assign({ origin: fx.outOrigin }, t)));
     } else {
       o.outLayer.style.zIndex = inTop ? 2 : 1; o.inLayer.style.zIndex = inTop ? 1 : 2;
       anims.push(PZ.animate(o.outLayer, fx.in, Object.assign({ origin: fx.inOrigin, direction: 'reverse' }, t)), PZ.animate(o.inLayer, fx.out, Object.assign({ origin: fx.outOrigin, direction: 'reverse' }, t)));
     }
+    if (scene) anims.push(...PZ.runScene(fx.scene, 'transition', o.inLayer.parentNode, { w: o.w, h: o.h, duration, easing, doc: o.doc }));
     const live = anims.filter(Boolean);
     return {
       finished: Promise.all(live.map((a) => a.finished.catch(() => {}))).then(() => live.forEach((a) => a.cancel())),
@@ -194,9 +225,16 @@
   PZ.animateElement = function (node, anim, doc, opts) {
     const fx = PZ.getEffect(doc, anim.effect);
     if (!fx) return null;
-    return PZ.animate(node, fx.frames, {
-      w: doc.w, h: doc.h, origin: fx.origin, delay: (opts && opts.delay) || 0,
-      duration: anim.duration || fx.duration || 600, easing: anim.easing || fx.easing || 'smooth',
-    });
+    const timing = { delay: (opts && opts.delay) || 0, duration: anim.duration || fx.duration || 600, easing: anim.easing || fx.easing || 'smooth' };
+    const a = PZ.animate(node, fx.frames, Object.assign({ w: doc.w, h: doc.h, origin: fx.origin }, timing));
+    if (a) PZ.elementScene(node, fx.scene, doc, timing);
+    return a;
+  };
+
+  /** Particles of an element effect around its box, on a layer of the slide (they outlive a skipped animation). */
+  PZ.elementScene = function (node, scene, doc, timing) {
+    if (!scene || !PZ.SCENES[scene]) return;
+    const st = node.style, box = { x: parseFloat(st.left) || 0, y: parseFloat(st.top) || 0, w: parseFloat(st.width) || 100, h: parseFloat(st.height) || 100 };
+    PZ.runScene(scene, 'element', node.closest('.pz-slide') || node.parentNode, Object.assign({ w: doc.w, h: doc.h, box, doc }, timing));
   };
 })(window.PZ = window.PZ || {});

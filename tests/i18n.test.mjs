@@ -34,7 +34,7 @@ export function englishKeys() {
   const names = [
     ...Object.values(PZ.EFFECTS).map((e) => e.name), ...Object.values(PZ.SHAPES).map((s) => s.name), ...PZ.LAYOUTS.map((l) => l.name),
     ...PZ.ASPECTS.map((a) => a.name), ...PZ.EASINGS.map((e) => e.name), ...Object.values(PZ.SHADOWS).map((s) => s.name),
-    ...Object.values(PZ.FX_KINDS), ...PZ.FRAME_PROPS.map((p) => p.name), ...Object.values(PZ.SRC_LABELS), ...Object.keys(PZ.ICON_SET),
+    ...Object.values(PZ.FX_KINDS), ...PZ.FRAME_PROPS.map((p) => p.name), ...Object.values(PZ.SCENES).map((s) => s.name), ...Object.values(PZ.SRC_LABELS), ...Object.keys(PZ.ICON_SET),
     ...PZ.FONTS.filter((f) => f.google == null).map((f) => f.name),
   ];
   names.forEach((n) => keys.add(n));

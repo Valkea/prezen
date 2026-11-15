@@ -340,6 +340,20 @@
     E.rebuild();
     if (!stored && E.mode === 'file') { E.setDirty(true); PZ.toast(t('This browser cannot remember the language here: save the file ({key}) to keep it.', { key: MOD + 'S' }), { timeout: 7000 }); }
   };
+  /** Fun pack (explosions, turtles, confetti…): listed in the effect pickers when on. Remembered in this browser;
+   *  slides that use fun effects play them whatever this setting. */
+  let funMem = null;
+  E.funOn = function () {
+    if (funMem != null) return funMem;
+    try { return localStorage.getItem('prezen:fun') === '1'; } catch (e) { return false; }
+  };
+  E.setFun = function (on, quiet) {
+    funMem = !!on;
+    try { localStorage.setItem('prezen:fun', on ? '1' : '0'); funMem = null; } catch (e) { /* private mode: this session only */ }
+    E.refresh('inspector');
+    if (!quiet) PZ.toast(on ? t('Fun effects on: explosions, turtles, confetti… are now in the transition and animation lists.') : t('Fun effects hidden from the lists. Slides that use them still play them.'), { timeout: 4500 });
+  };
+
   function langMenu(anchor, o) {
     ui.menu(anchor, Object.keys(PZ.LANGS).map((l) => ({ label: PZ.LANGS[l], icon: l === PZ.lang ? 'check' : null, run: () => E.setLang(l) })), o);
   }
@@ -391,6 +405,7 @@
       { label: E.doc.password ? t('Password protection: on…') : t('Password protection…'), icon: E.doc.password ? 'lock' : 'unlock', run: () => PZ.edDialogs.password() },
       '-',
       { label: t('Page size & theme…'), icon: 'sliders', run: () => PZ.edDialogs.pageSetup() },
+      { label: E.funOn() ? t('Fun effects: on') : t('Fun effects: off'), icon: 'sparkles', run: () => E.setFun(!E.funOn()) },
       { label: t('Language: {name}', { name: PZ.LANGS[PZ.lang] }), icon: 'globe', run: () => langMenu(anchor) },
       { label: t('Keyboard shortcuts'), icon: 'keyboard', kbd: '?', run: () => PZ.edDialogs.shortcuts() },
       { label: t('About PrezEn & privacy'), icon: 'info', run: () => PZ.edDialogs.about() },

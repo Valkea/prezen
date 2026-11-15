@@ -291,6 +291,9 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .st-list { flex: 1; overflow: auto; max-height: 62vh; display: flex; flex-direction: column; gap: 1px; padding-right: 4px; }
 .st-list > * { flex: none; }
 .st-list-head { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 8px 4px; }
+.st-fun-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.st-fun-head .ui-toggle { text-transform: none; letter-spacing: 0; }
+.st-fun-hint { margin: 0; padding: 2px 8px 8px; color: var(--muted); font-size: 12px; }
 .st-item { all: unset; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
 .st-item .pz-ico { width: 14px; height: 14px; color: var(--accent); }
 .st-item:hover { background: var(--hover); }

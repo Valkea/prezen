@@ -155,7 +155,7 @@
         const t = (o.reverse ? prev.slide : next.slide).transition || {};
         const tr = PZ.runTransition({
           inLayer: next.layer, outLayer: prev.layer, effect: PZ.getEffect(this.doc, t.effect) || PZ.EFFECTS.fade,
-          duration: t.duration, easing: t.easing, w: this.doc.w, h: this.doc.h, reverse: !!o.reverse, perspective: this.scaler,
+          duration: t.duration, easing: t.easing, w: this.doc.w, h: this.doc.h, reverse: !!o.reverse, perspective: this.scaler, doc: this.doc,
         });
         this.trans = tr;
         await tr.finished;

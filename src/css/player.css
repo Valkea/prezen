@@ -46,6 +46,12 @@ body.pz-player-body { margin: 0; background: #000; overflow: hidden; }
 .pz-scaler { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .pz-layer { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; will-change: transform, opacity; }
 .pz-layer > .pz-slide { position: absolute; left: 0; top: 0; }
+/* particle scenes of the fun effects (fun.js): above the slides, or above a slide's elements */
+.pz-fx { position: absolute; left: 0; top: 0; overflow: hidden; pointer-events: none; z-index: 3; contain: strict; }
+.pz-fx.pz-fx-el { z-index: 50; }
+.pz-fx-p { position: absolute; left: 0; top: 0; opacity: 0; will-change: transform, opacity; }
+.pz-fx-p > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.pz-fx-p .pz-flame { transform-box: fill-box; transform-origin: 50% 0; }
 .pz-curtain { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
 .pz-curtain.pz-black { background: #000; opacity: 1; pointer-events: auto; }
 .pz-curtain.pz-white { background: #fff; opacity: 1; pointer-events: auto; }

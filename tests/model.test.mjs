@@ -170,3 +170,25 @@ test('animation steps: click / with / after', () => {
   assert.equal(steps[1].auto, false);
   assert.deepEqual(plain(steps[1].items.map((i) => [i.kind, i.start])), [['in', 0], ['out', 100], ['emph', 600]]);
 });
+
+test('fun pack: every fun effect names a scene of its kind; custom copies keep the scene', () => {
+  const fun = Object.values(PZ.EFFECTS).filter((e) => e.fun);
+  assert.ok(fun.length >= 15);
+  for (const fx of fun) {
+    if (!fx.scene) continue;
+    const sc = PZ.SCENES[fx.scene];
+    assert.ok(sc, fx.id + ' scene exists');
+    assert.equal(sc.kind, fx.kind === 'transition' ? 'transition' : 'element', fx.id + ' scene kind');
+  }
+  const copy = PZ.normalizeEffect(Object.assign({}, PZ.EFFECTS['fun-boom'], { id: 'custom-x' }));
+  assert.equal(copy.scene, 'boom');
+  assert.equal(copy.fun, undefined);
+  assert.equal(PZ.normalizeEffect({ id: 'c', kind: 'in', frames: [], scene: 'bad scene!' }).scene, undefined);
+});
+
+test('keyframes: stretch (scaleX / scaleY) only when used', () => {
+  const k = PZ.toKeyframes([{ scaleX: 1.2 }, {}], 100, 100);
+  assert.match(k[0].transform, / scale\(1\.2, 1\)$/);
+  assert.match(k[1].transform, / scale\(1, 1\)$/);
+  assert.match(PZ.toKeyframes([{ scale: 2 }, {}], 100, 100)[0].transform, /rotateY\(0deg\) scale\(2\)$/);
+});

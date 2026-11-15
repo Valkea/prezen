@@ -19,6 +19,10 @@
   flashdrive, double-click it on Linux, Windows or macOS, and edit or present with no install and no network.
 - 🎬 **Transitions and animations.** 27 slide transitions (fade, push, cube, flip, dive, iris, wipes…),
   32 element effects (entrance, emphasis, exit), and a **Studio** to design your own with keyframes.
+- 🐢 **Fun pack for younger audiences.** Turn on **Menu → Fun effects** (or the *Fun pack* switch in the Studio) for
+  9 transitions (big explosion, turtle parade, confetti, hearts, rainbow, bubbles, warp speed, rocket, paint splash)
+  and 10 element effects (confetti pop, boing, jelly, tada, heartbeat, turtle escort, explode, poof, blast off…).
+  The switch only shows them in the lists (remembered per browser): decks that use them always play them.
 - 🖨️ **PDF export** through the browser's print engine: vector text, one page per slide, or an A4 handout
   with speaker notes.
 
@@ -85,6 +89,7 @@ created from a local file point there.
 | `src/js/assets.js` | Image references: embedded assets, Drive / S3 / Dropbox / relative paths |
 | `src/js/shapes.js`, `icons.js` | Vector shapes and the built-in icon set |
 | `src/js/effects.js` | Effect library and the keyframe engine (Web Animations API) |
+| `src/js/fun.js` | Fun pack: particle scenes (inline SVG sprites) and the effects that use them |
 | `src/js/render.js` | Slide → DOM, shared by editor, player, thumbnails and print |
 | `src/js/player.js`, `print.js` | Slideshow (+ presenter view) and PDF |
 | `src/js/codec.js` | Share links: JSON → deflate (`CompressionStream`) → base64url, optional password encryption (Web Crypto) and its prompt |
@@ -115,8 +120,10 @@ editable file can export and save new files with no network.
 }
 ```
 
-Keyframes use `opacity`, `x` / `y` (percent of the slide), `scale`, `rotate`, `rotateX`, `rotateY`, `blur`
-and `clip` (`inset()`, `circle()`, `ellipse()`, `polygon()`), with optional `offset` and `easing`.
+Keyframes use `opacity`, `x` / `y` (percent of the slide), `scale`, `scaleX` / `scaleY` (stretch), `rotate`, `rotateX`,
+`rotateY`, `blur` and `clip` (`inset()`, `circle()`, `ellipse()`, `polygon()`), with optional `offset` and `easing`.
+An effect may also name a particle `scene` from `fun.js` (e.g. `"scene": "confetti"`); transitions with a scene play
+forward when going back instead of being rewound.
 
 ## Privacy
 

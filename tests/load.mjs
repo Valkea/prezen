@@ -19,6 +19,6 @@ export function load(files) {
   return ctx.PZ;
 }
 
-export const CORE = ['src/js/core.js', 'src/js/i18n.js', 'src/js/sanitize.js', 'src/js/model.js', 'src/js/assets.js', 'src/js/icons.js', 'src/js/shapes.js', 'src/js/effects.js', 'src/js/codec.js'];
+export const CORE = ['src/js/core.js', 'src/js/i18n.js', 'src/js/sanitize.js', 'src/js/model.js', 'src/js/assets.js', 'src/js/icons.js', 'src/js/shapes.js', 'src/js/effects.js', 'src/js/fun.js', 'src/js/codec.js'];
 /** JSON round trip: compares values across VM realms. */
 export const plain = (v) => JSON.parse(JSON.stringify(v));

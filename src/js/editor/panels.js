@@ -128,13 +128,21 @@
   const live = (label, fn, alsoInspector) => E.update(label, fn, { merge: true, refresh: 'stage thumb' + (alsoInspector ? ' inspector' : '') });
   const set = (label, fn, alsoInspector) => (v, done) => live(label, () => fn(v), alsoInspector && done);
 
-  function fxOptions(kinds, doc) {
+  /** Picker options for effects of some kinds. Fun effects are listed when the fun pack is on (or when `cur` is one);
+   *  otherwise a last option offers to turn it on. */
+  const SHOW_FUN = '\u0000fun';
+  function fxOptions(kinds, doc, cur) {
     const out = [];
+    const fun = E.funOn();
     for (const kind of kinds) {
-      const builtins = Object.values(PZ.EFFECTS).filter((e) => e.kind === kind).map((e) => ({ value: e.id, label: t(e.name) }));
+      const all = Object.values(PZ.EFFECTS).filter((e) => e.kind === kind);
+      const builtins = all.filter((e) => !e.fun).map((e) => ({ value: e.id, label: t(e.name) }));
       const custom = Object.values(doc.effects || {}).filter((e) => e.kind === kind).map((e) => ({ value: e.id, label: '★ ' + e.name }));
       out.push({ group: t(PZ.FX_KINDS[kind]), options: builtins.concat(custom) });
+      const funny = all.filter((e) => e.fun && (fun || e.id === cur)).map((e) => ({ value: e.id, label: '✨ ' + t(e.name) }));
+      if (funny.length) out.push({ group: t('Fun: {kind}', { kind: t(PZ.FX_KINDS[kind]) }), options: funny });
     }
+    if (!fun) out.push({ group: t('Fun pack'), options: [{ value: SHOW_FUN, label: '✨ ' + t('Show fun effects (explosions, turtles…)') }] });
     return out;
   }
   const easingOptions = (withDefault) => (withDefault ? [{ value: '', label: t('Effect default') }] : []).concat(PZ.EASINGS.map((e) => ({ value: e.id, label: t(e.name) })));
@@ -187,8 +195,8 @@
     const tr = s.transition;
     const fx = PZ.getEffect(E.doc, tr.effect);
     pane.appendChild(ui.section('Transition into this slide', h('div', null,
-      ui.row(t('Effect'), ui.pick(tr.effect, fxOptions(['transition'], E.doc), (v) => I.setTransition(v),
-        { previewDelay: 250, onPreview: (v) => (v ? previewTransition(Object.assign({ effect: v }, transitionDefaults(v))) : stopTransition()) })),
+      ui.row(t('Effect'), ui.pick(tr.effect, fxOptions(['transition'], E.doc, tr.effect), (v) => (v === SHOW_FUN ? E.setFun(true) : I.setTransition(v)),
+        { previewDelay: 250, onPreview: (v) => (v && v !== SHOW_FUN ? previewTransition(Object.assign({ effect: v }, transitionDefaults(v))) : stopTransition()) })),
       fx && fx.id !== 'none' ? ui.row(t('Duration'), ui.slider(tr.duration, set('Transition', (v) => { tr.duration = v; }), { min: 100, max: 3000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })) : null,
       fx && fx.id !== 'none' ? ui.row(t('Easing'), ui.select(tr.easing, easingOptions(true), set('Transition', (v) => { tr.easing = v; }))) : null,
       h('div', { class: 'ui-btn-row' },
@@ -263,7 +271,7 @@
     box.append(out, inn);
     stage.appendChild(box);
     transBox = box;
-    const run = PZ.runTransition({ inLayer: inn, outLayer: out, effect: PZ.getEffect(E.doc, tr.effect), duration: tr.duration, easing: tr.easing, w: E.doc.w, h: E.doc.h, perspective: box });
+    const run = PZ.runTransition({ inLayer: inn, outLayer: out, effect: PZ.getEffect(E.doc, tr.effect), duration: tr.duration, easing: tr.easing, w: E.doc.w, h: E.doc.h, perspective: box, doc: E.doc });
     run.finished.then(() => setTimeout(() => { box.remove(); if (transBox === box) transBox = null; }, 250));
   }
 
@@ -411,8 +419,9 @@
   function animControls(el) {
     const a = el.anim;
     const box = h('div');
-    const opts = [{ value: '', label: t('None') }].concat(fxOptions(['in', 'emph', 'out'], E.doc));
+    const opts = [{ value: '', label: t('None') }].concat(fxOptions(['in', 'emph', 'out'], E.doc, a && a.effect));
     box.appendChild(ui.row(t('Effect'), ui.pick(a ? a.effect : '', opts, (v) => {
+      if (v === SHOW_FUN) { E.setFun(true); return; }
       live('Animation', (d, s) => {
         if (!v) { el.anim = null; return; }
         const f = PZ.getEffect(E.doc, v);
@@ -420,7 +429,7 @@
         el.anim = Object.assign({ trigger: 'click', delay: 0, easing: '', order: maxOrder + 1 }, el.anim || {}, { effect: v, duration: (f && f.duration) || 600 });
       }, true);
       setTimeout(() => PZ.edStage.previewAnim(el), 60);
-    }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect([el], v) })));
+    }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect([el], v !== SHOW_FUN && v) })));
     if (a) {
       box.appendChild(ui.row(t('Start'), ui.seg(a.trigger, [{ value: 'click', label: t('On click') }, { value: 'with', label: t('With prev.') }, { value: 'after', label: t('After prev.') }], set('Animation start', (v) => { a.trigger = v; }, true))));
       box.appendChild(ui.row(t('Duration'), ui.slider(a.duration, set('Animation duration', (v) => { a.duration = v; }), { min: 100, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
@@ -443,11 +452,12 @@
       ui.row(t('Layer'), h('div', { class: 'ui-btn-group' }, ui.iconBtn('bring-front', t('Bring to front'), () => E.zorder('front')), ui.iconBtn('send-back', t('Send to back'), () => E.zorder('back')))))));
     pane.appendChild(ui.section('Animate together', h('div', null,
       ui.row(t('Effect'), ui.pick('', [{ value: '', label: t('Choose…') }].concat(fxOptions(['in', 'emph', 'out'], E.doc)), (v) => {
+        if (v === SHOW_FUN) { E.setFun(true); return; }
         live('Animate selection', (d, s) => {
           const base = Math.max(0, ...s.els.filter((x) => x.anim && !els.includes(x)).map((x) => x.anim.order || 0));
           els.slice().sort((p, q) => p.y - q.y || p.x - q.x).forEach((x, i) => { x.anim = v ? { effect: v, trigger: i ? 'after' : 'click', duration: (PZ.getEffect(E.doc, v) || {}).duration || 600, delay: 0, easing: '', order: base + i + 1 } : null; });
         }, true);
-      }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect(els.slice().sort((p, q) => p.y - q.y || p.x - q.x), v) })),
+      }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect(els.slice().sort((p, q) => p.y - q.y || p.x - q.x), v !== SHOW_FUN && v) })),
       h('p', { class: 'ed-hint', text: t('One click plays them one after the other, top to bottom.') }))));
     pane.appendChild(ui.section('Appearance', ui.row(t('Opacity'), ui.slider(Math.round(els[0].opacity * 100), set('Opacity', (v) => els.forEach((x) => { x.opacity = v / 100; })), { min: 0, max: 100, fmt: (v) => v + '%' }))));
   }
