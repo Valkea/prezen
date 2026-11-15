@@ -305,6 +305,11 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .st-stage { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); background: #000; }
 .st-inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .st-editor { min-width: 0; }
+.st-use { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+.st-use-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.st-use-state { color: var(--muted); font-size: 11px; }
+.st-use-state.on { color: var(--accent); font-weight: 600; }
+.st-sub { font-weight: 700; margin: 14px 0 6px; }
 .st-frames { margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; padding: 10px; overflow-x: auto; }
 .st-frames-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .st-origin { display: inline-grid; grid-template-columns: repeat(3, 18px); gap: 1px; margin-left: auto; }

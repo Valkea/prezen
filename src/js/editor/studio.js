@@ -63,14 +63,14 @@
         const out = h('div', { class: 'pz-layer' }, PZ.renderSlide(E.doc, a, 'play'));
         const inn = h('div', { class: 'pz-layer' }, PZ.renderSlide(E.doc, b, 'play'));
         inner.append(out, inn);
-        const r = PZ.runTransition({ inLayer: inn, outLayer: out, effect: fx, w: E.doc.w, h: E.doc.h, perspective: inner, duration: fx.duration != null ? fx.duration : 700 });
+        const r = PZ.runTransition({ inLayer: inn, outLayer: out, effect: fx, w: E.doc.w, h: E.doc.h, perspective: inner, duration: use.duration, easing: use.easing });
         done = r.finished.then(() => out.remove());
       } else {
         const slide = sampleElementSlide();
         const s = PZ.renderSlide(E.doc, slide, 'play');
         inner.appendChild(s);
         const node = s.querySelector('.pz-el');
-        const a = PZ.animate(node, fx.frames, { w: E.doc.w, h: E.doc.h, origin: fx.origin, duration: fx.duration || 600, easing: fx.easing || 'smooth' });
+        const a = PZ.animate(node, fx.frames, { w: E.doc.w, h: E.doc.h, origin: fx.origin, duration: use.duration, easing: use.easing || fx.easing || 'smooth' });
         done = a ? a.finished.catch(() => {}).then(() => a.cancel()) : Promise.resolve();
       }
       done.then(() => { if (loop && m.el.isConnected) loopTimer = setTimeout(play, 900); });
@@ -96,6 +96,7 @@
     function pick(e, custom) {
       isCustom = custom;
       fx = custom ? PZ.clone(e) : e;
+      initUse();
       renderList();
       renderEditor();
       play();
@@ -108,6 +109,54 @@
       const e = PZ.normalizeEffect(Object.assign(src, { id, kind, name: base ? t('{name} (custom)', { name: PZ.fxName(base) }) : kind === 'transition' ? t('My transition') : t('My animation') }));
       E.commit('New effect', (d) => { d.effects[id] = e; }, { refresh: 'inspector' });
       pick(E.doc.effects[id], true);
+    }
+
+    // ---- how the shown effect is used here (same settings as the side panel), for built-in and custom effects alike.
+    // While the effect is the one this slide / the selected element uses, changes apply right away; otherwise they are
+    // what the preview plays and what the "Use…" buttons apply.
+    let use = { duration: 700, easing: '', trigger: 'click', delay: 0 };
+    const target = () => (kind === 'transition' ? E.slide().transition : (E.one() || {}).anim);
+    const applied = () => !!fx && fx.id === inUse();
+    const defDuration = (e) => (e.kind === 'transition' ? (e.duration != null ? e.duration || 0 : 700) : e.duration || 600);
+    function initUse() {
+      const cur = target();
+      if (cur && cur.effect === fx.id) use = { duration: cur.duration, easing: cur.easing || '', trigger: cur.trigger || 'click', delay: cur.delay || 0 };
+      // like the side panel: a new transition takes the effect's timing; a new animation keeps the element's start, delay and easing
+      else use = { duration: defDuration(fx), easing: kind === 'transition' ? '' : (cur && cur.easing) || '', trigger: (cur && cur.trigger) || 'click', delay: (cur && cur.delay) || 0 };
+    }
+    function setUse(key, v, done) {
+      use[key] = v;
+      if (applied()) {
+        const label = kind === 'transition' ? 'Transition' : { duration: 'Animation duration', easing: 'Animation easing', trigger: 'Animation start', delay: 'Animation delay' }[key];
+        E.update(label, () => { target()[key] = v; }, { merge: true, refresh: 'stage thumb' + (done ? ' inspector' : '') });
+      }
+      if (key !== 'delay' && key !== 'trigger') replay();
+    }
+    const useBox = h('div', { class: 'st-use' });
+    function renderUse() {
+      useBox.textContent = '';
+      const isTr = fx.kind === 'transition';
+      const one = E.one();
+      const on = applied();
+      useBox.appendChild(h('div', { class: 'st-use-head' },
+        h('b', { text: isTr ? (E.cur > 0 ? t('Transition from slide {a} to {b}', { a: E.cur, b: E.cur + 1 }) : t('Transition into this slide')) : one ? t('On the selected element') : t('Timing') }),
+        h('small', { class: 'st-use-state' + (on ? ' on' : ''), text: on ? t('In use: changes apply right away') : isTr || one ? t('Not used yet: preview only') : t('Preview only') })));
+      if (!isTr && one) useBox.appendChild(ui.row(t('Start'), ui.seg(use.trigger, [{ value: 'click', label: t('On click') }, { value: 'with', label: t('With prev.') }, { value: 'after', label: t('After prev.') }], (v) => { setUse('trigger', v, true); renderUse(); })));
+      useBox.appendChild(ui.row(t('Duration'), ui.slider(use.duration, (v, done) => setUse('duration', v, done), { min: 100, max: isTr ? 3000 : 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
+      if (!isTr && one) useBox.appendChild(ui.row(t('Delay'), ui.slider(use.delay, (v, done) => setUse('delay', v, done), { min: 0, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
+      useBox.appendChild(ui.row(t('Easing'), ui.select(use.easing, [{ value: '', label: t('Effect default') }].concat(PZ.EASINGS.map((e) => ({ value: e.id, label: t(e.name) }))), (v) => setUse('easing', v, true))));
+      const actions = h('div', { class: 'ui-btn-row' });
+      const timing = () => ({ effect: fx.id, duration: use.duration, easing: use.easing });
+      if (isTr) {
+        if (!on) actions.appendChild(h('button', { class: 'ui-btn ui-primary ui-small', text: E.cur > 0 ? t('Use from slide {a} to {b}', { a: E.cur, b: E.cur + 1 }) : t('Use on this slide'), onClick: () => { E.commit('Transition', (d, s) => { s.transition = timing(); }); PZ.toast(t('Transition set on slide {n}', { n: E.cur + 1 })); renderList(); renderUse(); } }));
+        actions.appendChild(h('button', { class: 'ui-btn ui-small', text: t('Use on all slides'), onClick: () => { E.commit('Transition on all slides', (d) => d.slides.forEach((s) => { s.transition = timing(); })); PZ.toast(t('Transition set on every slide')); renderList(); renderUse(); } }));
+      } else if (!on) {
+        actions.appendChild(h('button', { class: 'ui-btn ui-primary ui-small', text: one ? t('Use on selected element') : t('Select an element first'), disabled: !one, onClick: () => {
+          E.commit('Animation', (d, s) => { const maxOrder = Math.max(0, ...s.els.filter((x) => x.anim && x !== one).map((x) => x.anim.order || 0)); one.anim = Object.assign({ order: maxOrder + 1 }, one.anim || {}, timing(), { trigger: use.trigger, delay: use.delay }); });
+          PZ.toast(t('Animation applied')); renderList(); renderUse();
+        } }));
+      }
+      if (actions.childNodes.length) useBox.appendChild(actions);
     }
 
     // ---- editor of custom effects
@@ -164,31 +213,27 @@
       editor.textContent = '';
       title.textContent = fx ? PZ.fxName(fx) : '';
       if (!fx) return;
-      const actions = h('div', { class: 'ui-btn-row' });
-      if (fx.kind === 'transition') {
-        actions.append(
-          h('button', { class: 'ui-btn ui-primary ui-small', text: E.cur > 0 ? t('Use from slide {a} to {b}', { a: E.cur, b: E.cur + 1 }) : t('Use on this slide'), onClick: () => { E.commit('Transition', (d, s) => { s.transition = { effect: fx.id, duration: fx.duration || 700, easing: '' }; }); PZ.toast(t('Transition set on slide {n}', { n: E.cur + 1 })); renderList(); } }),
-          h('button', { class: 'ui-btn ui-small', text: t('Use on all slides'), onClick: () => { E.commit('Transition on all slides', (d) => d.slides.forEach((s) => { s.transition = { effect: fx.id, duration: fx.duration || 700, easing: '' }; })); PZ.toast(t('Transition set on every slide')); renderList(); } }));
-      } else {
-        const one = E.one();
-        actions.append(h('button', { class: 'ui-btn ui-primary ui-small', text: one ? t('Use on selected element') : t('Select an element first'), disabled: !one, onClick: () => {
-          E.commit('Animation', (d, s) => { const maxOrder = Math.max(0, ...s.els.filter((x) => x.anim && x !== one).map((x) => x.anim.order || 0)); one.anim = Object.assign({ trigger: 'click', delay: 0, easing: '', order: maxOrder + 1 }, one.anim || {}, { effect: fx.id, duration: fx.duration || 600 }); });
-          PZ.toast(t('Animation applied')); renderList();
-        } }));
-      }
-      if (!isCustom) actions.appendChild(h('button', { class: 'ui-btn ui-small', onClick: () => createFrom(fx) }, PZ.icon('copy'), h('span', { text: t('Customize a copy') })));
-      editor.appendChild(actions);
+      renderUse();
+      editor.appendChild(useBox);
       if (!isCustom) {
+        editor.appendChild(h('div', { class: 'ui-btn-row' }, h('button', { class: 'ui-btn ui-small', onClick: () => createFrom(fx) }, PZ.icon('copy'), h('span', { text: t('Customize a copy') }))));
         editor.appendChild(h('p', { class: 'ed-hint', text: t('Built-in effects are read-only. “Customize a copy” to change its keyframes, timing and pivot: your version is saved inside this presentation (and in its exports and links).') }));
         editor.appendChild(h('pre', { class: 'st-json', text: JSON.stringify(Object.assign({}, fx, { builtin: undefined }), null, 1) }));
         return;
       }
+      editor.appendChild(h('div', { class: 'st-sub', text: t('Effect definition') }));
       editor.appendChild(ui.row(t('Name'), ui.text(fx.name, (v, done) => { fx.name = v || t('Custom effect'); if (done) save(); })));
-      editor.appendChild(ui.row(t('Duration'), ui.slider(fx.duration, (v, done) => { fx.duration = v; if (done) save(); else replay(); }, { min: 100, max: 4000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
+      // the effect's own timing: what it starts with when picked for a slide or an element
+      editor.appendChild(ui.row(t('Default duration'), ui.slider(fx.duration, (v, done) => {
+        const follow = !applied() && use.duration === defDuration(fx);
+        fx.duration = v;
+        if (follow) { use.duration = defDuration(fx); renderUse(); }
+        if (done) save(); else replay();
+      }, { min: 100, max: 4000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       const presets = PZ.EASINGS.map((e) => ({ value: e.id, label: t(e.name) })).concat([{ value: 'custom', label: t('Custom cubic-bezier…') }]);
       const isPreset = PZ.EASINGS.some((e) => e.id === fx.easing) || !fx.easing;
       const bez = ui.text(isPreset ? '' : fx.easing, (v, done) => { if (done) { fx.easing = v.trim(); save(); } }, { mono: true, placeholder: 'cubic-bezier(.2,.8,.2,1)' });
-      editor.appendChild(ui.row(t('Easing'), ui.select(isPreset ? fx.easing || 'smooth' : 'custom', presets, (v) => { if (v !== 'custom') { fx.easing = v; save(); } else bez.focus(); }), bez));
+      editor.appendChild(ui.row(t('Default easing'), ui.select(isPreset ? fx.easing || 'smooth' : 'custom', presets, (v) => { if (v !== 'custom') { fx.easing = v; save(); } else bez.focus(); }), bez));
       if (fx.kind === 'transition') {
         editor.appendChild(ui.row(t('Layers'), ui.toggle(fx.inTop !== false, (v) => { fx.inTop = v; save(); }, t('Incoming slide on top'))));
         editor.appendChild(framesTable(t('Incoming slide'), fx.in, save, 'inOrigin'));
