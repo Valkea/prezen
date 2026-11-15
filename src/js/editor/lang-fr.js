@@ -214,6 +214,8 @@
     'Tint %': 'Teinte %',
     'Apply to all slides': 'Appliquer à toutes les diapositives',
     'Transition into this slide': 'Transition vers cette diapositive',
+    'Transition from slide {a} to {b}': 'Transition de la diapositive {a} à {b}',
+    'No transition': 'Aucune transition',
     'Effect': 'Effet',
     'Duration': 'Durée',
     'Easing': 'Accélération',

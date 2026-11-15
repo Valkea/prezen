@@ -171,65 +171,79 @@
     btn.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); open(); } });
 
     function open() {
-      if (o.onOpen) o.onOpen();
-      const list = h('div', { class: 'ui-menu ui-pick-list', role: 'listbox', style: { minWidth: Math.max(200, btn.offsetWidth) + 'px' } });
-      let timer = 0, shown = null, quiet = true;
-      const preview = (v) => {
-        clearTimeout(timer);
-        if (!o.onPreview || v === shown) return;
-        const go = () => { shown = v; o.onPreview(v); };
-        if (v != null && o.previewDelay) timer = setTimeout(go, o.previewDelay); else go();
-      };
-      const item = (opt) => {
-        const b = h('button', { class: 'ui-menu-item ui-pick-item' + (opt.value === value ? ' ui-on' : ''), role: 'option', 'aria-selected': String(opt.value === value), dataset: { v: opt.value },
-          onClick: () => {
-            pop.close(); // ends the preview first, then the pick is applied for real
-            if (opt.value !== value) { value = opt.value; lab.textContent = opt.label; if (o.optStyle) Object.assign(lab.style, o.optStyle(value)); }
-            onChange(opt.value, true);
-          } },
-          h('span', { class: 'ui-menu-label', text: opt.label, style: o.optStyle ? o.optStyle(opt.value) : null }));
-        b.addEventListener('mouseenter', () => {
-          quiet = false;
-          if (document.activeElement === b) preview(opt.value); else b.focus({ preventScroll: true });
-        });
-        b.addEventListener('focus', () => { if (!quiet) preview(opt.value); });
-        return b;
-      };
-      for (const x of options) {
-        if (x.group) { list.appendChild(h('div', { class: 'ui-menu-head', text: x.group })); x.options.forEach((y) => list.appendChild(item(y))); } else list.appendChild(item(x));
-      }
-      list.addEventListener('mouseleave', () => { if (list.contains(document.activeElement)) btn.focus({ preventScroll: true }); preview(null); });
-      list.addEventListener('keydown', (e) => {
-        e.stopPropagation(); // keep the editor's shortcuts (arrows move elements, Enter edits) out of the list
-        const btns = PZ.$$('.ui-pick-item', list);
-        const i = btns.indexOf(document.activeElement);
-        let j = -1;
-        if (e.key === 'ArrowDown') j = Math.min(btns.length - 1, i + 1);
-        else if (e.key === 'ArrowUp') j = Math.max(0, i - 1);
-        else if (e.key === 'Home') j = 0;
-        else if (e.key === 'End') j = btns.length - 1;
-        else if (e.key === 'Tab') { e.preventDefault(); pop.close(); btn.focus(); return; }
-        else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-          const ch = e.key.toLowerCase();
-          const order = btns.slice(i + 1).concat(btns.slice(0, i + 1));
-          const hit = order.find((b) => b.textContent.trim().replace(/^★\s*/, '').toLowerCase().startsWith(ch));
-          if (hit) j = btns.indexOf(hit);
-        }
-        if (j < 0) return;
-        e.preventDefault();
-        quiet = false;
-        btns[j].focus();
-        btns[j].scrollIntoView({ block: 'nearest' });
-      });
-      pop = ui.popover(btn, list, { cls: 'ui-pick-pop', onClose: () => {
-        clearTimeout(timer);
-        if (shown != null && o.onPreview) { shown = null; o.onPreview(null); } // undo the preview
-        if (btn.isConnected && (document.activeElement === document.body || !document.activeElement)) btn.focus({ preventScroll: true });
-      } });
-      const cur = list.querySelector('.ui-pick-item.ui-on') || list.querySelector('.ui-pick-item');
-      if (cur) { cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: 'center' }); }
+      pop = ui.pickList(btn, value, options, (v) => {
+        if (v !== value) { value = v; lab.textContent = labelOf(v); if (o.optStyle) Object.assign(lab.style, o.optStyle(value)); }
+        onChange(v, true);
+      }, o);
     }
     return btn;
+  };
+
+  /**
+   * The option list of ui.pick, opened as a popover under any anchor. onPick(value) runs when an option is
+   * chosen; o.onPreview / o.previewDelay / o.optStyle / o.onOpen work as in ui.pick; o.onClose runs when the list closes; o.at {x, y} places it
+   * there instead of under the anchor. Returns the popover.
+   */
+  ui.pickList = function (anchor, value, options, onPick, o) {
+    o = o || {};
+    if (o.onOpen) o.onOpen();
+    const list = h('div', { class: 'ui-menu ui-pick-list', role: 'listbox', style: { minWidth: Math.max(200, anchor.offsetWidth) + 'px' } });
+    let timer = 0, shown = null, quiet = true, pop = null;
+    const preview = (v) => {
+      clearTimeout(timer);
+      if (!o.onPreview || v === shown) return;
+      const go = () => { shown = v; o.onPreview(v); };
+      if (v != null && o.previewDelay) timer = setTimeout(go, o.previewDelay); else go();
+    };
+    const item = (opt) => {
+      const b = h('button', { class: 'ui-menu-item ui-pick-item' + (opt.value === value ? ' ui-on' : ''), role: 'option', 'aria-selected': String(opt.value === value), dataset: { v: opt.value },
+        onClick: () => {
+          pop.close(); // ends the preview first, then the pick is applied for real
+          onPick(opt.value);
+        } },
+        h('span', { class: 'ui-menu-label', text: opt.label, style: o.optStyle ? o.optStyle(opt.value) : null }));
+      b.addEventListener('mouseenter', () => {
+        quiet = false;
+        if (document.activeElement === b) preview(opt.value); else b.focus({ preventScroll: true });
+      });
+      b.addEventListener('focus', () => { if (!quiet) preview(opt.value); });
+      return b;
+    };
+    for (const x of options) {
+      if (x.group) { list.appendChild(h('div', { class: 'ui-menu-head', text: x.group })); x.options.forEach((y) => list.appendChild(item(y))); } else list.appendChild(item(x));
+    }
+    list.addEventListener('mouseleave', () => { if (list.contains(document.activeElement)) anchor.focus({ preventScroll: true }); preview(null); });
+    list.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // keep the editor's shortcuts (arrows move elements, Enter edits) out of the list
+      const btns = PZ.$$('.ui-pick-item', list);
+      const i = btns.indexOf(document.activeElement);
+      let j = -1;
+      if (e.key === 'ArrowDown') j = Math.min(btns.length - 1, i + 1);
+      else if (e.key === 'ArrowUp') j = Math.max(0, i - 1);
+      else if (e.key === 'Home') j = 0;
+      else if (e.key === 'End') j = btns.length - 1;
+      else if (e.key === 'Tab') { e.preventDefault(); pop.close(); anchor.focus(); return; }
+      else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        const ch = e.key.toLowerCase();
+        const order = btns.slice(i + 1).concat(btns.slice(0, i + 1));
+        const hit = order.find((b) => b.textContent.trim().replace(/^★\s*/, '').toLowerCase().startsWith(ch));
+        if (hit) j = btns.indexOf(hit);
+      }
+      if (j < 0) return;
+      e.preventDefault();
+      quiet = false;
+      btns[j].focus();
+      btns[j].scrollIntoView({ block: 'nearest' });
+    });
+    pop = ui.popover(anchor, list, { cls: 'ui-pick-pop', at: o.at, onClose: () => {
+      clearTimeout(timer);
+      if (shown != null && o.onPreview) { shown = null; o.onPreview(null); } // undo the preview
+      if (anchor.isConnected && (document.activeElement === document.body || !document.activeElement)) anchor.focus({ preventScroll: true });
+      if (o.onClose) o.onClose();
+    } });
+    const cur = list.querySelector('.ui-pick-item.ui-on') || list.querySelector('.ui-pick-item');
+    if (cur) { cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: 'center' }); }
+    return pop;
   };
 
   ui.toggle = function (value, onChange, label) {

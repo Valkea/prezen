@@ -57,7 +57,8 @@
         s.els.some((e) => e.anim) ? h('span', { title: t('Has animations') }, PZ.icon('sparkles')) : null,
         s.notes ? h('span', { title: t('Has speaker notes') }, PZ.icon('notes')) : null,
         s.auto ? h('span', { title: t('Advances automatically after {n} s', { n: s.auto }) }, PZ.icon('clock')) : null),
-      h('button', { class: 'ed-thumb-more', title: t('Slide actions'), onClick: (e) => { e.stopPropagation(); slideMenu(e.currentTarget, i); } }, PZ.icon('more')));
+      h('button', { class: 'ed-thumb-more', title: t('Slide actions'), onClick: (e) => { e.stopPropagation(); slideMenu(e.currentTarget, i); } }, PZ.icon('more')),
+      i > 0 ? transGap(i) : null);
     it.addEventListener('click', () => { if (E.cur !== i) E.goSlide(i); else if (E.sel.length) E.select([]); });
     it.addEventListener('contextmenu', (e) => { e.preventDefault(); E.goSlide(i); slideMenu(it, i, { x: e.clientX, y: e.clientY }); });
     it.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/x-prezen-slide', String(i)); e.dataTransfer.effectAllowed = 'move'; it.classList.add('ed-dragging'); });
@@ -79,6 +80,31 @@
       E.moveSlide(from, to);
     });
     return it;
+  }
+
+  /** Hover strip in the gap above slide i: a small button that picks the transition from slide i-1 into slide i. */
+  function transGap(i) {
+    const tr = E.doc.slides[i].transition;
+    const fx = PZ.getEffect(E.doc, tr.effect);
+    const name = fx && fx.id !== 'none' ? PZ.fxName(fx) : t('No transition');
+    const btn = h('button', { class: 'ed-trans-btn' + (fx && fx.id !== 'none' ? '' : ' ed-trans-none'), type: 'button', draggable: 'false', 'aria-haspopup': 'listbox', 'aria-expanded': 'false',
+      title: t('Transition from slide {a} to {b}', { a: i, b: i + 1 }), 'aria-label': t('Transition from slide {a} to {b}', { a: i, b: i + 1 }) + ': ' + name },
+      PZ.icon('sparkles'), h('span', { text: name }));
+    let pop = null;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (pop && pop.pop.isConnected) { pop.close(); return; }
+      if (E.cur !== i) E.goSlide(i); else if (E.sel.length) E.select([]); // inspector shows duration & easing; previews run from slide i-1
+      btn.setAttribute('aria-expanded', 'true');
+      pop = ui.pickList(btn, tr.effect, fxOptions(['transition'], E.doc), (v) => I.setTransition(v), {
+        previewDelay: 250,
+        onPreview: (v) => (v ? previewTransition(Object.assign({ effect: v }, transitionDefaults(v))) : stopTransition()),
+        onClose: () => btn.setAttribute('aria-expanded', 'false'),
+        at: { x: list.getBoundingClientRect().right + 6, y: btn.getBoundingClientRect().top - 8 }, // beside the list, so the thumbnails stay visible
+      });
+    });
+    btn.addEventListener('dragstart', (e) => { e.preventDefault(); e.stopPropagation(); });
+    return h('div', { class: 'ed-trans-gap' }, btn);
   }
 
   P.render = function () {
@@ -167,7 +193,7 @@
     const tr = s.transition;
     const fx = PZ.getEffect(E.doc, tr.effect);
     pane.appendChild(ui.section('Transition into this slide', h('div', null,
-      ui.row(t('Effect'), ui.pick(tr.effect, fxOptions(['transition'], E.doc), (v) => live('Transition', () => { tr.effect = v; Object.assign(tr, transitionDefaults(v)); }, true),
+      ui.row(t('Effect'), ui.pick(tr.effect, fxOptions(['transition'], E.doc), (v) => I.setTransition(v),
         { previewDelay: 250, onPreview: (v) => (v ? previewTransition(Object.assign({ effect: v }, transitionDefaults(v))) : stopTransition()) })),
       fx && fx.id !== 'none' ? ui.row(t('Duration'), ui.slider(tr.duration, set('Transition', (v) => { tr.duration = v; }), { min: 100, max: 3000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })) : null,
       fx && fx.id !== 'none' ? ui.row(t('Easing'), ui.select(tr.easing, easingOptions(true), set('Transition', (v) => { tr.easing = v; }))) : null,
@@ -214,6 +240,12 @@
     if (el.type === 'shape') return t((PZ.SHAPES[el.shape] || {}).name || 'Shape');
     return t('Image');
   }
+
+  /** Set the current slide's transition effect, with that effect's default duration and easing. */
+  I.setTransition = function (effect) {
+    const tr = E.slide().transition;
+    live('Transition', () => { tr.effect = effect; Object.assign(tr, transitionDefaults(effect)); }, true);
+  };
 
   /** Duration and easing a transition gets when its effect is chosen. */
   function transitionDefaults(effect) {
