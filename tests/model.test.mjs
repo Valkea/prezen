@@ -77,6 +77,19 @@ test('untrusted documents are cleaned', () => {
   assert.deepEqual(plain(d.effects.e1.frames), [{ opacity: 0 }, {}]);
 });
 
+test('new documents: size presets and custom sizes', () => {
+  assert.deepEqual([PZ.newDoc().w, PZ.newDoc().h], [1920, 1080]);
+  const p = PZ.newDoc({ aspect: '4:3' });
+  assert.deepEqual([p.w, p.h], [1440, 1080]);
+  const c = PZ.newDoc({ w: 1200.4, h: 628 });
+  assert.deepEqual([c.w, c.h], [1200, 628]);
+  const big = PZ.newDoc({ w: 99999, h: 5 });
+  assert.deepEqual([big.w, big.h], [8000, 100]);
+  const bad = PZ.newDoc({ aspect: '4:3', w: NaN, h: -1 });
+  assert.deepEqual([bad.w, bad.h], [1440, 1080]);
+  assert.deepEqual(plain(PZ.normalizeDoc(plain(c))).w, 1200);
+});
+
 test('safe links', () => {
   assert.equal(PZ.safeLink('https://a.b/c'), 'https://a.b/c');
   assert.equal(PZ.safeLink('#3'), '#3');

@@ -324,8 +324,9 @@
     document.title = title + ' · PrezEn';
   };
 
-  E.newDoc = function (aspect) {
-    const doc = PZ.newDoc({ aspect });
+  /** New presentation from a size preset id, or a custom size given as { w, h }. */
+  E.newDoc = function (size) {
+    const doc = PZ.newDoc(typeof size === 'object' && size ? { w: size.w, h: size.h } : { aspect: size });
     E.load(doc);
     history.replaceState(null, '', location.pathname + location.search);
   };

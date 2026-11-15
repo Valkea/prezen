@@ -131,8 +131,10 @@
   PZ.newDoc = function (o) {
     o = o || {};
     const asp = PZ.ASPECTS.find((a) => a.id === o.aspect) || PZ.ASPECTS[0];
+    // o.w / o.h give a custom page size (same bounds as normalizeDoc); otherwise the aspect preset decides
+    const dim = (v, def) => (isFinite(v) && v > 0 ? PZ.clamp(Math.round(v), 100, 8000) : def);
     const doc = {
-      v: 1, id: PZ.uid('d'), title: o.title || t('Untitled presentation'), w: asp.w, h: asp.h,
+      v: 1, id: PZ.uid('d'), title: o.title || t('Untitled presentation'), w: dim(o.w, asp.w), h: dim(o.h, asp.h),
       theme: PZ.defaultTheme(), slides: [], effects: {}, assets: {}, created: Date.now(), updated: Date.now(),
     };
     doc.slides.push(PZ.newSlide(doc, 'title'));

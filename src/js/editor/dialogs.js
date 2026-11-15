@@ -273,25 +273,41 @@
     fill();
   };
 
+  /**
+   * Page size picker: a preset list plus W/H fields kept in sync. Picking a preset fills the fields;
+   * typing a size selects the matching preset, or 'Custom'. get() returns the chosen { w, h }.
+   */
+  const sizePicker = function (w0, h0) {
+    let w = w0, hh = h0;
+    const match = () => (PZ.ASPECTS.find((a) => a.w === w && a.h === hh) || {}).id || 'custom';
+    const opts = PZ.ASPECTS.map((a) => ({ value: a.id, label: `${t(a.name)} (${a.w}×${a.h})` })).concat([{ value: 'custom', label: t('Custom (below)') }]);
+    const sel = ui.select(match(), opts, (v) => {
+      const a = PZ.ASPECTS.find((x) => x.id === v);
+      if (a) { w = a.w; hh = a.h; wIn.value = w; hIn.value = hh; } else wIn.focus();
+    });
+    const fields = h('div', { class: 'ed-grid2' },
+      ui.number(w, (v) => { w = Math.round(v); sel.value = match(); }, { label: t('W'), min: 100, max: 8000, decimals: 0 }),
+      ui.number(hh, (v) => { hh = Math.round(v); sel.value = match(); }, { label: t('H'), min: 100, max: 8000, decimals: 0 }));
+    const [wIn, hIn] = fields.querySelectorAll('input');
+    return { el: [h('label', { class: 'ui-label', text: t('Page size') }), sel, fields], get: () => ({ w, h: hh }) };
+  };
+
   D.newDoc = function () {
-    let aspect = '16:9';
+    const a0 = PZ.ASPECTS[0];
+    const size = sizePicker(a0.w, a0.h);
     ui.modal({ title: t('New presentation'), content: [
-      h('label', { class: 'ui-label', text: t('Page size') }),
-      ui.select(aspect, PZ.ASPECTS.map((a) => ({ value: a.id, label: `${t(a.name)} (${a.w}×${a.h})` })), (v) => { aspect = v; }),
+      ...size.el,
       h('p', { class: 'ed-hint', text: t('The current presentation stays in your browser library.') })],
-    buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: t('Create'), primary: true, run: (c) => { c(); E.newDoc(aspect); } }] });
+    buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: t('Create'), primary: true, run: (c) => { c(); E.newDoc(size.get()); } }] });
   };
 
   D.pageSetup = function () {
     const d = E.doc;
-    let aspect = (PZ.ASPECTS.find((a) => a.w === d.w && a.h === d.h) || {}).id || 'custom';
-    let w = d.w, hh = d.h, scale = true;
+    const size = sizePicker(d.w, d.h);
+    let scale = true;
     const th = PZ.clone(d.theme);
-    const custom = h('div', { class: 'ed-grid2' }, ui.number(w, (v) => { w = Math.round(v); }, { label: t('W'), min: 100, max: 8000 }), ui.number(hh, (v) => { hh = Math.round(v); }, { label: t('H'), min: 100, max: 8000 }));
     ui.modal({ title: t('Page size & theme'), content: [
-      h('label', { class: 'ui-label', text: t('Page size') }),
-      ui.select(aspect, PZ.ASPECTS.map((a) => ({ value: a.id, label: `${t(a.name)} (${a.w}×${a.h})` })).concat([{ value: 'custom', label: t('Custom (below)') }]), (v) => { aspect = v; const a = PZ.ASPECTS.find((x) => x.id === v); if (a) { w = a.w; hh = a.h; } }),
-      custom,
+      ...size.el,
       ui.toggle(true, (v) => { scale = v; }, t('Scale the content to the new size')),
       h('label', { class: 'ui-label', text: t('Theme (used for new elements)') }),
       ui.row(t('Font'), ui.select(th.font, PZ.FONTS.map((f) => ({ value: f.name, label: t(f.name) })), (v) => { th.font = v; })),
@@ -301,8 +317,7 @@
     ], buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: t('Apply'), primary: true, run: (c) => {
       c();
       E.commit('Page setup', (doc) => {
-        const a = PZ.ASPECTS.find((x) => x.id === aspect);
-        const nw = a ? a.w : w, nh = a ? a.h : hh;
+        const { w: nw, h: nh } = size.get();
         if (scale && (nw !== doc.w || nh !== doc.h)) {
           const kx = nw / doc.w, ky = nh / doc.h, kf = Math.min(kx, ky);
           PZ.eachEl(doc, (el) => { el.x = Math.round(el.x * kx); el.y = Math.round(el.y * ky); el.w = Math.round(el.w * kx); el.h = Math.round(el.h * ky); if (el.style) el.style.size = Math.round(el.style.size * kf); });
