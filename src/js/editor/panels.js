@@ -82,27 +82,21 @@
     return it;
   }
 
-  /** Hover strip in the gap above slide i: a small button that picks the transition from slide i-1 into slide i. */
+  /** Marker in the gap above slide i for the transition from slide i-1 into it: always shown when there is one
+   *  (hover reveals its name), and a click opens the studio on it. */
   function transGap(i) {
     const tr = E.doc.slides[i].transition;
     const fx = PZ.getEffect(E.doc, tr.effect);
-    const name = fx && fx.id !== 'none' ? PZ.fxName(fx) : t('No transition');
-    const btn = h('button', { class: 'ed-trans-btn' + (fx && fx.id !== 'none' ? '' : ' ed-trans-none'), type: 'button', draggable: 'false', 'aria-haspopup': 'listbox', 'aria-expanded': 'false',
-      title: t('Transition from slide {a} to {b}', { a: i, b: i + 1 }), 'aria-label': t('Transition from slide {a} to {b}', { a: i, b: i + 1 }) + ': ' + name },
-      PZ.icon('sparkles'), h('span', { text: name }));
-    let pop = null;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (pop && pop.pop.isConnected) { pop.close(); return; }
-      if (E.cur !== i) E.goSlide(i); else if (E.sel.length) E.select([]); // inspector shows duration & easing; previews run from slide i-1
-      btn.setAttribute('aria-expanded', 'true');
-      pop = ui.pickList(btn, tr.effect, fxOptions(['transition'], E.doc), (v) => I.setTransition(v), {
-        previewDelay: 250,
-        onPreview: (v) => (v ? previewTransition(Object.assign({ effect: v }, transitionDefaults(v))) : stopTransition()),
-        onClose: () => btn.setAttribute('aria-expanded', 'false'),
-        at: { x: list.getBoundingClientRect().right + 6, y: btn.getBoundingClientRect().top - 8 }, // beside the list, so the thumbnails stay visible
-      });
-    });
+    const on = !!fx && fx.id !== 'none';
+    const name = on ? PZ.fxName(fx) : t('No transition');
+    const label = t('Transition from slide {a} to {b}', { a: i, b: i + 1 }) + ': ' + name;
+    const btn = h('button', { class: 'ed-trans-btn' + (on ? '' : ' ed-trans-none'), type: 'button', draggable: 'false', title: label, 'aria-label': label,
+      onClick: (e) => {
+        e.stopPropagation();
+        if (E.cur !== i) E.goSlide(i); else if (E.sel.length) E.select([]);
+        PZ.edStudio.open({ select: tr.effect });
+      } },
+      PZ.icon(on ? 'sparkles' : 'plus'), h('span', { class: 'ed-trans-name', text: name }));
     btn.addEventListener('dragstart', (e) => { e.preventDefault(); e.stopPropagation(); });
     return h('div', { class: 'ed-trans-gap' }, btn);
   }

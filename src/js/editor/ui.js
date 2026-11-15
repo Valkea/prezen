@@ -181,8 +181,7 @@
 
   /**
    * The option list of ui.pick, opened as a popover under any anchor. onPick(value) runs when an option is
-   * chosen; o.onPreview / o.previewDelay / o.optStyle / o.onOpen work as in ui.pick; o.onClose runs when the list closes; o.at {x, y} places it
-   * there instead of under the anchor. Returns the popover.
+   * chosen; o.onPreview / o.previewDelay / o.optStyle / o.onOpen work as in ui.pick; o.onClose runs when the list closes. Returns the popover.
    */
   ui.pickList = function (anchor, value, options, onPick, o) {
     o = o || {};
@@ -235,7 +234,7 @@
       btns[j].focus();
       btns[j].scrollIntoView({ block: 'nearest' });
     });
-    pop = ui.popover(anchor, list, { cls: 'ui-pick-pop', at: o.at, onClose: () => {
+    pop = ui.popover(anchor, list, { cls: 'ui-pick-pop', onClose: () => {
       clearTimeout(timer);
       if (shown != null && o.onPreview) { shown = null; o.onPreview(null); } // undo the preview
       if (anchor.isConnected && (document.activeElement === document.body || !document.activeElement)) anchor.focus({ preventScroll: true });

@@ -28,7 +28,11 @@
     let isCustom = false;
     let kind = 'transition';
     let loop = true, loopTimer = 0;
-    const sel = o.select && PZ.getEffect(E.doc, o.select);
+    // what this slide (or the selected element) uses now: shown selected on open and marked in the list
+    const inUse = () => (kind === 'transition' ? E.slide().transition.effect : ((E.one() || {}).anim || {}).effect);
+    const one = E.one();
+    const want = o.select || (one && one.anim ? one.anim.effect : E.slide().transition.effect);
+    const sel = want && PZ.getEffect(E.doc, want);
     if (sel) { kind = sel.kind; }
 
     const listEl = h('div', { class: 'st-list' });
@@ -85,7 +89,9 @@
       listEl.appendChild(h('button', { class: 'ui-btn ui-small st-new', onClick: () => createFrom(null) }, PZ.icon('plus'), h('span', { text: t('New blank effect') })));
     }
     function row(e, custom) {
-      return h('button', { class: 'st-item' + (fx && fx.id === e.id ? ' on' : ''), onClick: () => pick(e, custom) }, custom ? PZ.icon('star') : null, h('span', { text: PZ.fxName(e) }));
+      const used = e.id === inUse();
+      return h('button', { class: 'st-item' + (fx && fx.id === e.id ? ' on' : ''), onClick: () => pick(e, custom) }, custom ? PZ.icon('star') : null, h('span', { text: PZ.fxName(e) }),
+        used ? h('small', { class: 'st-used', title: kind === 'transition' ? t('Used on this slide') : t('Used by the selected element') }, PZ.icon('check'), t('Current')) : null);
     }
     function pick(e, custom) {
       isCustom = custom;
@@ -161,13 +167,13 @@
       const actions = h('div', { class: 'ui-btn-row' });
       if (fx.kind === 'transition') {
         actions.append(
-          h('button', { class: 'ui-btn ui-primary ui-small', text: t('Use on this slide'), onClick: () => { E.commit('Transition', (d, s) => { s.transition = { effect: fx.id, duration: fx.duration || 700, easing: '' }; }); PZ.toast(t('Transition set on slide {n}', { n: E.cur + 1 })); } }),
-          h('button', { class: 'ui-btn ui-small', text: t('Use on all slides'), onClick: () => { E.commit('Transition on all slides', (d) => d.slides.forEach((s) => { s.transition = { effect: fx.id, duration: fx.duration || 700, easing: '' }; })); PZ.toast(t('Transition set on every slide')); } }));
+          h('button', { class: 'ui-btn ui-primary ui-small', text: E.cur > 0 ? t('Use from slide {a} to {b}', { a: E.cur, b: E.cur + 1 }) : t('Use on this slide'), onClick: () => { E.commit('Transition', (d, s) => { s.transition = { effect: fx.id, duration: fx.duration || 700, easing: '' }; }); PZ.toast(t('Transition set on slide {n}', { n: E.cur + 1 })); renderList(); } }),
+          h('button', { class: 'ui-btn ui-small', text: t('Use on all slides'), onClick: () => { E.commit('Transition on all slides', (d) => d.slides.forEach((s) => { s.transition = { effect: fx.id, duration: fx.duration || 700, easing: '' }; })); PZ.toast(t('Transition set on every slide')); renderList(); } }));
       } else {
         const one = E.one();
         actions.append(h('button', { class: 'ui-btn ui-primary ui-small', text: one ? t('Use on selected element') : t('Select an element first'), disabled: !one, onClick: () => {
           E.commit('Animation', (d, s) => { const maxOrder = Math.max(0, ...s.els.filter((x) => x.anim && x !== one).map((x) => x.anim.order || 0)); one.anim = Object.assign({ trigger: 'click', delay: 0, easing: '', order: maxOrder + 1 }, one.anim || {}, { effect: fx.id, duration: fx.duration || 600 }); });
-          PZ.toast(t('Animation applied'));
+          PZ.toast(t('Animation applied')); renderList();
         } }));
       }
       if (!isCustom) actions.appendChild(h('button', { class: 'ui-btn ui-small', onClick: () => createFrom(fx) }, PZ.icon('copy'), h('span', { text: t('Customize a copy') })));
