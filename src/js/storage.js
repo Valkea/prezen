@@ -109,8 +109,39 @@
           return handle;
         } catch (e) { if (e.name === 'AbortError') return 'cancel'; console.warn('Save picker failed, downloading instead', e); }
       }
-      PZ.download(name, blob);
+      // No save picker (Firefox, Safari): the browser decides where downloads go, so at least let the user pick the name.
+      const chosen = await this.askName(name);
+      if (chosen == null) return 'cancel';
+      PZ.download(chosen, blob);
       return null;
+    },
+
+    /** In-app "Save as" dialog for the download fallback. Resolves to a file name (extension kept) or null. */
+    askName(name) {
+      const ui = PZ.ui, h = PZ.h, t = PZ.t;
+      if (!ui || !ui.modal) return Promise.resolve(name);
+      const ext = (/\.[^.]+$/.exec(name) || [''])[0];
+      return new Promise((resolve) => {
+        let out = null;
+        const ok = () => {
+          const base = input.value.replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').trim().replace(new RegExp(ext.replace('.', '\\.') + '$', 'i'), '').trim();
+          if (!base) { input.focus(); return; }
+          out = base + ext; m.close();
+        };
+        const input = h('input', { class: 'ui-input', value: name.slice(0, name.length - ext.length), autofocus: true,
+          onKeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); ok(); } } });
+        const m = ui.modal({
+          title: t('Save as'),
+          content: [
+            h('label', { class: 'ui-label', text: t('File name') }),
+            h('div', { class: 'ui-row' }, input, h('span', { text: ext })),
+            h('p', { class: 'ed-hint', text: t('This browser saves files to its downloads folder. To choose the folder each time, enable “Always ask where to save files” in its settings.') }),
+          ],
+          onClose: () => resolve(out),
+          buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: t('Save'), primary: true, run: () => ok() }],
+        });
+        setTimeout(() => input.select(), 40);
+      });
     },
 
     async write(handle, blob) {
