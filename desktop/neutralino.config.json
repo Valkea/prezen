@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
+  "applicationId": "io.github.valkea.prezen",
+  "applicationName": "PrezEn",
+  "version": "0.1.0",
+  "defaultMode": "window",
+  "port": 47615,
+  "documentRoot": "/resources/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "tokenSecurity": "one-time",
+  "dataLocation": "app",
+  "storageLocation": "app",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": false
+  },
+  "nativeAllowList": [
+    "app.exit",
+    "os.showOpenDialog",
+    "os.showSaveDialog",
+    "os.open",
+    "filesystem.readFile",
+    "filesystem.writeBinaryFile",
+    "window.setTitle"
+  ],
+  "modes": {
+    "window": {
+      "title": "PrezEn",
+      "width": 1280,
+      "height": 800,
+      "minWidth": 800,
+      "minHeight": 500,
+      "center": true,
+      "enableInspector": false,
+      "resizable": true,
+      "exitProcessOnClose": false,
+      "injectGlobals": true,
+      "injectClientLibrary": true
+    }
+  },
+  "cli": {
+    "binaryName": "prezen",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "binaryVersion": "6.10.0",
+    "clientVersion": "6.10.0"
+  }
+}

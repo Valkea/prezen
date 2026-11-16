@@ -3,3 +3,9 @@ dist/
 .DS_Store
 *.log
 /.playwright-mcp/
+# desktop app (Neutralinojs): generated files and downloaded binaries
+/desktop/bin/
+/desktop/dist/
+/desktop/resources/
+/desktop/.tmp/
+/desktop/.storage/
