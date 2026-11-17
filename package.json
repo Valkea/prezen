@@ -1,7 +1,7 @@
 {
   "name": "prezen",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Build, present and share presentations in the browser. No account, works offline, single-file HTML and PDF export.",
   "type": "module",
   "scripts": {
