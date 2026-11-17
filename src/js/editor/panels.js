@@ -431,7 +431,7 @@
       setTimeout(() => PZ.edStage.previewAnim(el), 60);
     }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect([el], v !== SHOW_FUN && v) })));
     if (a) {
-      box.appendChild(ui.row(t('Start'), ui.seg(a.trigger, [{ value: 'click', label: t('On click') }, { value: 'with', label: t('With prev.') }, { value: 'after', label: t('After prev.') }], set('Animation start', (v) => { a.trigger = v; }, true))));
+      box.appendChild(ui.trigger(a.trigger, set('Animation start', (v) => { a.trigger = v; }, true), { first: ui.firstAnim(E.doc, E.slide(), el) }));
       box.appendChild(ui.row(t('Duration'), ui.slider(a.duration, set('Animation duration', (v) => { a.duration = v; }), { min: 100, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       box.appendChild(ui.row(t('Delay'), ui.slider(a.delay, set('Animation delay', (v) => { a.delay = v; }), { min: 0, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       box.appendChild(ui.row(t('Easing'), ui.select(a.easing, easingOptions(true), set('Animation easing', (v) => { a.easing = v; }))));

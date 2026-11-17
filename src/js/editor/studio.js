@@ -156,7 +156,7 @@
       useBox.appendChild(h('div', { class: 'st-use-head' },
         h('b', { text: isTr ? (E.cur > 0 ? t('Transition from slide {a} to {b}', { a: E.cur, b: E.cur + 1 }) : t('Transition into this slide')) : one ? t('On the selected element') : t('Timing') }),
         h('small', { class: 'st-use-state' + (on ? ' on' : ''), text: on ? t('In use: changes apply right away') : isTr || one ? t('Not used yet: preview only') : t('Preview only') })));
-      if (!isTr && one) useBox.appendChild(ui.row(t('Start'), ui.seg(use.trigger, [{ value: 'click', label: t('On click') }, { value: 'with', label: t('With prev.') }, { value: 'after', label: t('After prev.') }], (v) => { setUse('trigger', v, true); renderUse(); })));
+      if (!isTr && one) useBox.appendChild(ui.trigger(use.trigger, (v) => setUse('trigger', v, true), { first: ui.firstAnim(E.doc, E.slide(), one) }));
       useBox.appendChild(ui.row(t('Duration'), ui.slider(use.duration, (v, done) => setUse('duration', v, done), { min: 100, max: isTr ? 3000 : 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       if (!isTr && one) useBox.appendChild(ui.row(t('Delay'), ui.slider(use.delay, (v, done) => setUse('delay', v, done), { min: 0, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       useBox.appendChild(ui.row(t('Easing'), ui.select(use.easing, [{ value: '', label: t('Effect default') }].concat(PZ.EASINGS.map((e) => ({ value: e.id, label: t(e.name) }))), (v) => setUse('easing', v, true))));

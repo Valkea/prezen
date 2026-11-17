@@ -263,7 +263,31 @@
     return wrap;
   };
 
-  ui.iconBtn = (icon, title, run, o) => h('button', { class: 'ui-icon-btn' + (o && o.on ? ' ui-on' : '') + (o && o.cls ? ' ' + o.cls : ''), title, 'aria-label': title, onMousedown: (e) => { if (!(o && o.focus)) e.preventDefault(); }, onClick: run }, PZ.icon(icon));
+  /** When an element animation starts: a menu with plain wording plus a line saying what happens during the show.
+   *  o.first: the element is (or would be) the first animation of its slide, where "with / after the previous one"
+   *  means "as soon as the slide appears". */
+  ui.trigger = function (value, onChange, o) {
+    const first = !!(o && o.first);
+    const hint = h('p', { class: 'ed-hint ui-trigger-hint' });
+    const explain = (v) => {
+      hint.textContent = v === 'click' ? t('Waits for a click (or the → key) during the presentation.')
+        : first ? t('First animation of the slide: starts by itself as soon as the slide appears.')
+          : v === 'with' ? t('Starts at the same time as the previous animation.') : t('Starts once the previous animation has finished.');
+    };
+    explain(value);
+    const sel = ui.select(value, [{ value: 'click', label: t('On click') }, { value: 'with', label: t('With the previous one') }, { value: 'after', label: t('After the previous one') }],
+      (v) => { explain(v); onChange(v, true); });
+    return h('div', null, ui.row(t('Starts'), sel), hint);
+  };
+
+  /** Would el be the first animation played on slide (it keeps its place if animated, else it is added last)? */
+  ui.firstAnim = function (doc, slide, el) {
+    if (!el.anim) return !slide.els.some((x) => x.anim);
+    const steps = PZ.buildSteps(doc, slide);
+    return !!steps[0] && steps[0].items[0].id === el.id;
+  };
+
+  ui.iconBtn =(icon, title, run, o) => h('button', { class: 'ui-icon-btn' + (o && o.on ? ' ui-on' : '') + (o && o.cls ? ' ' + o.cls : ''), title, 'aria-label': title, onMousedown: (e) => { if (!(o && o.focus)) e.preventDefault(); }, onClick: run }, PZ.icon(icon));
 
   ui.SWATCHES = ['#1d2433', '#5c6577', '#ffffff', '#f5f6fa', '#5b5bf0', '#7c8cff', '#00b3a4', '#22c55e', '#facc15', '#ff9f1c', '#ff6b6b', '#e64980', '#9b5de5', '#0ea5e9', '#000000'];
 
