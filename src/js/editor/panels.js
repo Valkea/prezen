@@ -161,6 +161,7 @@
     if (!els.length) slidePanel();
     else if (els.length === 1) elementPanel(els[0]);
     else multiPanel(els);
+    ui.openFirst(pane);
     pane.scrollTop = scroll;
   };
 
