@@ -288,10 +288,12 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 
 /* ---------------------------------------------------------------- studio */
 .ui-modal.st-modal { width: 1180px; }
-.st { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 18px; min-height: 60vh; }
+/* the body does not scroll: each column fills the modal height and scrolls on its own */
+.st-modal .ui-modal-body { overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+.st { display: grid; grid-template-columns: 240px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 18px; min-height: 60vh; flex: 1; }
 .st-left { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 .st-kinds { width: 100%; box-sizing: border-box; }
-.st-list { flex: 1; overflow: auto; max-height: 62vh; display: flex; flex-direction: column; gap: 1px; padding-right: 4px; }
+.st-list { flex: 1; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 1px; padding-right: 4px; }
 .st-list > * { flex: none; }
 .st-list-head { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 8px 4px; }
 .st-fun-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
@@ -304,7 +306,8 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .st-used { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); }
 .st-used .pz-ico { width: 12px; height: 12px; }
 .st-new { margin-top: 8px; }
-.st-right { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.st-right { min-width: 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.st-right > * { flex: none; }
 .st-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .st-title { font-weight: 700; font-size: 15px; }
 .st-preview { display: flex; justify-content: center; padding: 14px; border-radius: 12px; background: var(--canvas); min-height: 200px; }
@@ -342,5 +345,9 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
   .ed-main { grid-template-columns: 0 minmax(0, 1fr) 0; }
   .ed-slides, .ed-inspector { display: none; }
   .ed-brand-name, .ed-title { display: none; }
-  .st { grid-template-columns: 1fr; }
+  /* stacked: the body scrolls again, the list keeps a cap */
+  .st { grid-template-columns: 1fr; grid-template-rows: none; }
+  .st-modal .ui-modal-body { overflow: auto; }
+  .st-right { overflow: visible; }
+  .st-list { max-height: 40vh; }
 }
