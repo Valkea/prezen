@@ -50,13 +50,13 @@
     // ---- preview
     let k = 1;
     function stageBox() {
-      preview.textContent = '';
+      // measure before swapping: reading layout while the preview is empty collapses it and resets the scroll
       const w = Math.min(560, (preview.parentElement && preview.parentElement.clientWidth - 24) || 560);
       k = w / E.doc.w;
       const box = h('div', { class: 'st-stage', style: { width: w + 'px', height: E.doc.h * k + 'px' } });
       const inner = h('div', { class: 'st-inner', style: { width: E.doc.w + 'px', height: E.doc.h + 'px', transform: `scale(${k})` } });
       box.appendChild(inner);
-      preview.appendChild(box);
+      preview.replaceChildren(box);
       return inner;
     }
     function play() {
