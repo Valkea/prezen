@@ -31,7 +31,7 @@
     let fx = null; // effect shown (built-in object or working copy of a custom one)
     let isCustom = false;
     let kind = kinds[0];
-    let loop = true, loopTimer = 0;
+    let loop = true, loopTimer = 0, run = 0; // run: id of the current preview, so an older one never re-arms the loop
     // what this slide (or the selected element) uses now: shown selected on open and marked in the list
     const inUse = () => (kind === 'transition' ? E.slide().transition.effect : ((E.one() || {}).anim || {}).effect);
     const one = E.one();
@@ -61,6 +61,7 @@
     }
     function play() {
       clearTimeout(loopTimer);
+      const id = ++run;
       if (!fx) return;
       const inner = stageBox();
       let done;
@@ -79,9 +80,10 @@
         const timing = { duration: use.duration, easing: use.easing || fx.easing || 'smooth' };
         const a = PZ.animate(node, fx.frames, Object.assign({ w: E.doc.w, h: E.doc.h, origin: fx.origin }, timing));
         if (a) PZ.elementScene(node, fx.scene, E.doc, timing);
-        done = a ? a.finished.catch(() => {}).then(() => a.cancel()) : Promise.resolve();
+        // keep the end state on screen during the pause; the next play rebuilds the stage anyway
+        done = a ? a.finished.catch(() => {}) : Promise.resolve();
       }
-      done.then(() => { if (loop && m.el.isConnected) loopTimer = setTimeout(play, 900); });
+      done.then(() => { if (id === run && loop && m.el.isConnected) loopTimer = setTimeout(play, 900); });
     }
     const replay = PZ.debounce(play, 250);
 
