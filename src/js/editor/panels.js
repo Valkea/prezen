@@ -94,7 +94,7 @@
       onClick: (e) => {
         e.stopPropagation();
         if (E.cur !== i) E.goSlide(i); else if (E.sel.length) E.select([]);
-        PZ.edStudio.open({ select: tr.effect });
+        PZ.edStudio.open({ scope: 'transition', select: tr.effect });
       } },
       PZ.icon(on ? 'sparkles' : 'plus'), h('span', { class: 'ed-trans-name', text: name }));
     btn.addEventListener('dragstart', (e) => { e.preventDefault(); e.stopPropagation(); });
@@ -202,7 +202,7 @@
       h('div', { class: 'ui-btn-row' },
         h('button', { class: 'ui-btn ui-small', onClick: () => previewTransition(tr) }, PZ.icon('play'), h('span', { text: t('Preview') })),
         h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Apply to all'), onClick: () => E.commit('Transition on all slides', (d) => d.slides.forEach((x) => { x.transition = PZ.clone(tr); })) }),
-        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') }))))));
+        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'transition', select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') }))))));
 
     const animated = s.els.filter((e) => e.anim).sort((a, b) => (a.anim.order || 0) - (b.anim.order || 0));
     if (animated.length) {
@@ -437,7 +437,7 @@
       box.appendChild(ui.row(t('Easing'), ui.select(a.easing, easingOptions(true), set('Animation easing', (v) => { a.easing = v; }))));
       box.appendChild(h('div', { class: 'ui-btn-row' },
         h('button', { class: 'ui-btn ui-small', onClick: () => PZ.edStage.previewAnim(el) }, PZ.icon('play'), h('span', { text: t('Preview') })),
-        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ select: a.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Custom…') }))));
+        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'element', select: a.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Custom…') }))));
     }
     return box;
   }

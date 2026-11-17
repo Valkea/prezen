@@ -20,6 +20,8 @@
     'Add text (T)': 'Ajouter du texte (T)',
     'Add image (I)': 'Ajouter une image (I)',
     'Transition & animation studio': 'Studio de transitions et d’animations',
+    'Transition studio': 'Studio de transitions',
+    'Animation studio': 'Studio d’animations',
     'My presentations': 'Mes présentations',
     'Share': 'Partager',
     'Export': 'Exporter',

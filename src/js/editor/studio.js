@@ -22,17 +22,23 @@
     ] }, d.theme);
   }
 
+  /** o.scope: 'transition' (opened from a slide transition: slide transitions only), 'element' (opened from an
+   *  element's animation: entrance / emphasis / exit only), or nothing (toolbar: every kind). o.select: effect to show. */
   ST.open = function (o) {
     o = o || {};
+    const scope = o.scope === 'transition' || o.scope === 'element' ? o.scope : '';
+    const kinds = Object.keys(PZ.FX_KINDS).filter((kk) => !scope || (scope === 'transition') === (kk === 'transition'));
     let fx = null; // effect shown (built-in object or working copy of a custom one)
     let isCustom = false;
-    let kind = 'transition';
+    let kind = kinds[0];
     let loop = true, loopTimer = 0;
     // what this slide (or the selected element) uses now: shown selected on open and marked in the list
     const inUse = () => (kind === 'transition' ? E.slide().transition.effect : ((E.one() || {}).anim || {}).effect);
     const one = E.one();
-    const want = o.select || (one && one.anim ? one.anim.effect : E.slide().transition.effect);
-    const sel = want && PZ.getEffect(E.doc, want);
+    const elFx = one && one.anim ? one.anim.effect : '';
+    const want = o.select || (scope === 'transition' ? E.slide().transition.effect : scope === 'element' ? elFx : elFx || E.slide().transition.effect);
+    let sel = want && PZ.getEffect(E.doc, want);
+    if (sel && !kinds.includes(sel.kind)) sel = null;
     if (sel) { kind = sel.kind; }
 
     const listEl = h('div', { class: 'st-list' });
@@ -280,7 +286,8 @@
 
     function syncKinds() {
       kindTabs.textContent = '';
-      Object.entries(PZ.FX_KINDS).forEach(([kk, name]) => kindTabs.appendChild(h('button', { class: 'ui-seg-btn' + (kk === kind ? ' ui-on' : ''), text: t(name), onClick: () => {
+      kindTabs.style.display = kinds.length < 2 ? 'none' : '';
+      kinds.forEach((kk) => kindTabs.appendChild(h('button', { class: 'ui-seg-btn' + (kk === kind ? ' ui-on' : ''), text: t(PZ.FX_KINDS[kk]), onClick: () => {
         kind = kk; fx = null; syncKinds(); renderList(); renderEditor(); preview.textContent = '';
         const first = Object.values(PZ.EFFECTS).find((e) => e.kind === kind && e.id !== 'none');
         if (first) pick(first, false);
@@ -288,7 +295,7 @@
     }
 
     const m = ui.modal({
-      title: t('Transition & animation studio'), cls: 'st-modal', wide: true,
+      title: scope === 'transition' ? t('Transition studio') : scope === 'element' ? t('Animation studio') : t('Transition & animation studio'), cls: 'st-modal', wide: true,
       content: h('div', { class: 'st' },
         h('div', { class: 'st-left' }, kindTabs, listEl),
         h('div', { class: 'st-right' }, h('div', { class: 'st-top' }, title,
