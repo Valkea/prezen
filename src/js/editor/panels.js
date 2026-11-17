@@ -37,7 +37,7 @@
     ui.menu(anchor, [
       { label: t('New slide after'), icon: 'plus', kbd: 'N', run: () => layoutMenu(anchor, i) },
       { label: t('Duplicate'), icon: 'copy', kbd: 'Ctrl+D', run: () => E.duplicateSlide(i) },
-      { label: s.hidden ? t('Show in presentation') : t('Hide in presentation'), icon: s.hidden ? 'eye' : 'eye-off', run: () => E.commit('Hide slide', () => { s.hidden = !s.hidden; }) },
+      { label: s.hidden ? t('Stop skipping this slide') : t('Skip this slide when presenting'), icon: s.hidden ? 'eye' : 'eye-off', run: () => E.commit('Hide slide', () => { s.hidden = !s.hidden; }) },
       '-',
       { label: t('Move up'), icon: 'arrow-up', kbd: 'Alt+↑', disabled: i === 0, run: () => E.moveSlide(i, i - 1) },
       { label: t('Move down'), icon: 'arrow-down', kbd: 'Alt+↓', disabled: i === E.doc.slides.length - 1, run: () => E.moveSlide(i, i + 1) },
