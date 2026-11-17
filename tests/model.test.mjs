@@ -93,7 +93,7 @@ test('new documents: size presets and custom sizes', () => {
 test('image crop: clamped, at least 10 % kept, empty crop dropped', () => {
   assert.equal(PZ.normCrop(null), null);
   assert.equal(PZ.normCrop({ t: 0, r: 0, b: 0, l: 0 }), null);
-  assert.deepEqual(plain(PZ.normCrop({ t: 10, r: 'x', b: 5.55, l: -3 })), { t: 10, r: 0, b: 5.6, l: 0 });
+  assert.deepEqual(plain(PZ.normCrop({ t: 10, r: 'x', b: 5.556, l: -3 })), { t: 10, r: 0, b: 5.56, l: 0 });
   assert.deepEqual(plain(PZ.normCrop({ t: 80, b: 80, l: 200, r: 50 })), { t: 80, r: 0, b: 10, l: 90 });
   const d = PZ.newDoc();
   d.slides[0].els.push(PZ.make.image(d, { src: 'images/a.png', crop: { t: 12, r: 0, b: 0, l: 25 } }), PZ.make.image(d, { src: 'images/b.png' }));

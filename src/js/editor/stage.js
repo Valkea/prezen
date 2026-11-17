@@ -99,6 +99,13 @@
   S.renderOverlay = function (guides) {
     if (!overlay) return;
     overlay.textContent = '';
+    if (crop) {
+      const el = E.one();
+      // leave crop mode when the selection, the picture or its layout changed under it (undo, inspector…)
+      if (el && el.id === crop.id && el.src === crop.src && !el.locked && !cropMismatch(el, crop.nw, crop.nh)) { drawCrop(el); return; }
+      crop = null;
+      if (PZ.edInspector) E.refresh('inspector');
+    }
     const els = E.selected();
     const single = els.length === 1 ? els[0] : null;
     for (const el of els) {
@@ -135,6 +142,12 @@
   // ---------------------------------------------------------------- pointer interactions
   function onDown(e) {
     if (e.button !== 0) return;
+    if (e.target.closest('.ed-crop-bar')) return;
+    if (crop) {
+      const c = e.target.closest('[data-crop]');
+      if (c) { e.preventDefault(); e.stopPropagation(); startCropDrag(e, c.dataset.crop); return; }
+      S.endCrop();
+    }
     const handle = e.target.closest('[data-handle]');
     if (handle) { e.preventDefault(); e.stopPropagation(); if (handle.dataset.handle === 'rot') startRotate(e); else startResize(e, handle.dataset.handle); return; }
     if (E.editing) {
@@ -307,6 +320,8 @@
   }
 
   function onDbl(e) {
+    if (e.target.closest('.ed-crop-bar')) return;
+    if (e.target.closest('.ed-crop')) { S.endCrop(); return; }
     const node = e.target.closest('.pz-el');
     const el = node && E.find(node.dataset.id);
     if (!el) {
@@ -317,8 +332,13 @@
     }
     if (el.locked) return;
     if (el.type === 'text' || el.type === 'shape') S.startEdit(el.id, false, e);
-    else if (el.type === 'image') PZ.edDialogs.image({ title: t('Replace image'), onPick: (ref) => E.update('Replace image', () => { el.src = ref; }) });
+    else if (el.type === 'image' && el.src) S.startCrop(el.id);
+    else if (el.type === 'image') replaceImage(el);
     else if (el.type === 'icon') PZ.edDialogs.icons({ onPick: (svg, name) => E.update('Replace icon', () => { el.svg = svg; el.name = name; }) });
+  }
+
+  function replaceImage(el) {
+    PZ.edDialogs.image({ title: t('Replace image'), initial: el.src, onPick: (ref) => E.update('Replace image', () => { el.src = ref; }, { refresh: 'stage thumb inspector' }) });
   }
 
   function onContext(e) {
@@ -342,6 +362,8 @@
       one ? '-' : null,
       one ? { label: one.locked ? t('Unlock') : t('Lock'), icon: one.locked ? 'unlock' : 'lock', run: () => E.commit(one.locked ? 'Unlock' : 'Lock', () => { one.locked = !one.locked; }) } : null,
       one && (one.type === 'text' || one.type === 'shape') ? { label: t('Edit text'), icon: 'type', kbd: t('Enter'), run: () => S.startEdit(one.id, true) } : null,
+      one && one.type === 'image' && one.src && !one.locked ? { label: crop ? t('Done cropping') : t('Crop picture'), icon: 'crop', kbd: t('Enter'), run: () => (crop ? S.endCrop() : S.startCrop(one.id)) } : null,
+      one && one.type === 'image' && !one.locked ? { label: t('Replace image…'), icon: 'image', run: () => replaceImage(one) } : null,
       has ? '-' : null,
       has ? { label: t('Delete'), icon: 'trash', kbd: t('Del'), danger: true, run: () => E.deleteSel() } : null,
       !has ? '-' : null,
@@ -370,6 +392,151 @@
       const url = (e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || '').trim();
       if (/^https?:\/\//.test(url)) E.insertImage(url, p);
     }
+  }
+
+  // ---------------------------------------------------------------- crop mode (pictures)
+  // While cropping, the frame is exactly the kept part of the picture (fill / fit layouts are converted on entry,
+  // which looks the same), so the whole picture's rectangle follows from the frame and the crop percentages:
+  // dragging the frame's handles crops, dragging the picture moves it, its round corner handles zoom it.
+  let crop = null; // { id, src, nw, nh, img }: the picture being cropped, its natural size, the dimmed copy
+
+  const frameOf = (el) => ({ x: el.x, y: el.y, w: el.w, h: el.h, bw: el.bw, rot: el.rot });
+  const minKept = (size) => Math.max(8, (size * (100 - PZ.CROP_MAX)) / 100);
+
+  /** In the element's own axes, relative to its content box (inside the border): the content size and the picture P. */
+  function cropGeo(el) {
+    const c = el.crop || { t: 0, r: 0, b: 0, l: 0 };
+    const W = el.w - 2 * el.bw, H = el.h - 2 * el.bw;
+    const pw = (W * 100) / (100 - c.l - c.r), ph = (H * 100) / (100 - c.t - c.b);
+    return { W, H, P: { x: (-c.l * pw) / 100, y: (-c.t * ph) / 100, w: pw, h: ph } };
+  }
+
+  /** Where the kept part V and the picture P are drawn now (fill / fit / focus), in content box coordinates. */
+  function shownGeo(el, nw, nh) {
+    const c = el.crop || { t: 0, r: 0, b: 0, l: 0 };
+    const W = el.w - 2 * el.bw, H = el.h - 2 * el.bw;
+    const RW = (nw * (100 - c.l - c.r)) / 100, RH = (nh * (100 - c.t - c.b)) / 100;
+    const s = (el.fit === 'cover' ? Math.max : Math.min)(W / RW, H / RH);
+    const [px, py] = (el.pos || '50% 50%').split(' ').map((v) => parseFloat(v) / 100);
+    const dw = RW * s, dh = RH * s, ox = (W - dw) * px, oy = (H - dh) * py;
+    const P = { x: ox - (c.l / 100) * nw * s, y: oy - (c.t / 100) * nh * s, w: nw * s, h: nh * s };
+    const V = el.fit === 'cover' ? { x: 0, y: 0, w: W, h: H } : { x: ox, y: oy, w: dw, h: dh };
+    return { V, P, off: Math.max(Math.abs(dw - W), Math.abs(dh - H)) };
+  }
+  /** True when the kept part does not fill the frame exactly (then crop mode first converts the layout). */
+  function cropMismatch(el, nw, nh) { return el.fit !== 'fill' && shownGeo(el, nw, nh).off > 1.5; }
+
+  /** Frame = kept part V, crop = V within the picture P (both in the content box axes of frame o, before the change). */
+  function applyCrop(el, o, V, P) {
+    const bw = o.bw;
+    const w = Math.max(2 * bw + 1, Math.round(V.w + 2 * bw)), hh = Math.max(2 * bw + 1, Math.round(V.h + 2 * bw));
+    const vw = Math.min(w - 2 * bw, P.w), vh = Math.min(hh - 2 * bw, P.h);
+    const vx = PZ.clamp(V.x + (V.w - vw) / 2, P.x, P.x + P.w - vw), vy = PZ.clamp(V.y + (V.h - vh) / 2, P.y, P.y + P.h - vh);
+    const th = (o.rot * Math.PI) / 180, cos = Math.cos(th), sin = Math.sin(th);
+    const dx = bw + vx + vw / 2 - o.w / 2, dy = bw + vy + vh / 2 - o.h / 2; // new centre, from the old one, in the element's axes
+    const cx = o.x + o.w / 2 + dx * cos - dy * sin, cy = o.y + o.h / 2 + dx * sin + dy * cos;
+    el.w = w; el.h = hh; el.x = Math.round(cx - w / 2); el.y = Math.round(cy - hh / 2);
+    el.crop = PZ.normCrop({ l: ((vx - P.x) / P.w) * 100, r: ((P.x + P.w - vx - vw) / P.w) * 100, t: ((vy - P.y) / P.h) * 100, b: ((P.y + P.h - vy - vh) / P.h) * 100 });
+  }
+
+  S.cropping = () => (crop ? crop.id : null);
+
+  S.startCrop = async function (id) {
+    let el = E.find(id);
+    if (!el || el.type !== 'image' || !el.src || el.locked) return;
+    if (E.editing) S.endEdit();
+    if (crop && crop.id === id) return;
+    const src = el.src;
+    const size = await PZ.imageSize(src, E.doc);
+    el = E.find(id);
+    if (!el || el.src !== src) return;
+    if (!size || !size.w || !size.h) { PZ.toast(t('The picture could not be loaded.'), { type: 'warn' }); return; }
+    if (cropMismatch(el, size.w, size.h)) {
+      const g = shownGeo(el, size.w, size.h), o = frameOf(el);
+      E.commit('Crop', () => applyCrop(el, o, g.V, g.P), { refresh: 'stage thumb inspector' });
+    }
+    const img = h('img', { alt: '', draggable: 'false' });
+    PZ.setImgSrc(img, src, E.doc);
+    crop = { id, src, nw: size.w, nh: size.h, img };
+    E.select([id]);
+  };
+
+  S.endCrop = function () {
+    if (!crop) return;
+    crop = null;
+    E.refresh('overlay inspector');
+  };
+
+  function drawCrop(el) {
+    const { W, H, P } = cropGeo(el), bw = el.bw, px = (v) => v * k + 'px';
+    const box = h('div', { class: 'ed-crop', style: { left: px(el.x), top: px(el.y), width: px(el.w), height: px(el.h), transform: el.rot ? `rotate(${el.rot}deg)` : null } });
+    // the whole picture, dimmed, with a hole where the element shows the kept part
+    const ghost = h('div', { class: 'ed-crop-ghost', dataset: { crop: 'pan' } }, crop.img);
+    const a = ((-bw - P.x) / P.w) * 100, b = ((-bw - P.y) / P.h) * 100, c = ((W + bw - P.x) / P.w) * 100, d = ((H + bw - P.y) / P.h) * 100; // the frame, border included
+    ghost.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${a}% ${b}%, ${c}% ${b}%, ${c}% ${d}%, ${a}% ${d}%, ${a}% ${b}%)`;
+    crop.img.style.transform = el.flip ? 'scaleX(-1)' : '';
+    crop.img.style.filter = PZ.imageFilters(el.filters);
+    const pic = h('div', { class: 'ed-crop-pic', style: { left: px(bw + P.x), top: px(bw + P.y), width: px(P.w), height: px(P.h) } }, ghost);
+    for (const hd of ['nw', 'ne', 'se', 'sw']) pic.appendChild(h('div', { class: 'ed-h ed-zh ed-h-' + hd, dataset: { crop: 'z-' + hd }, title: t('Zoom the picture') }));
+    const kept = h('div', { class: 'ed-crop-box', dataset: { crop: 'pan' }, style: { left: px(bw), top: px(bw), width: px(W), height: px(H) } });
+    for (const hd of HANDLES) kept.appendChild(h('div', { class: 'ed-h ed-ch ed-h-' + hd, dataset: { crop: 'e-' + hd } }));
+    const c0 = el.crop || { t: 0, r: 0, b: 0, l: 0 };
+    kept.appendChild(h('div', { class: 'ed-size-tag', text: `${Math.round(el.w)} × ${Math.round(el.h)} · ${t('Crop')} ${[c0.t, c0.r, c0.b, c0.l].map((v) => Math.round(v)).join(' / ')} %` }));
+    box.append(pic, kept);
+    overlay.appendChild(box);
+    overlay.appendChild(h('div', { class: 'ed-crop-bar' },
+      PZ.icon('crop'),
+      h('span', { text: t('Drag the edges to crop, the picture to move it, its round handles to zoom.') }),
+      h('button', { class: 'ui-btn ui-small ui-primary', text: t('Done'), onClick: () => S.endCrop() })));
+  }
+
+  /** what: 'pan' (move the picture), 'e-<dir>' (an edge or corner of the kept part), 'z-<corner>' (zoom the picture). */
+  function startCropDrag(e, what) {
+    const el = E.one();
+    if (!el || !crop) return;
+    const o = frameOf(el), start = { x: el.x, y: el.y, w: el.w, h: el.h, crop: el.crop };
+    const g = cropGeo(el), P0 = g.P, V0 = { x: 0, y: 0, w: g.W, h: g.H };
+    const th = (el.rot * Math.PI) / 180, cos = Math.cos(th), sin = Math.sin(th);
+    const p0 = toLogical(e);
+    let node = nodeOf(el.id), moved = false;
+    drag(e, (ev) => {
+      const p = toLogical(ev);
+      const ddx = p.x - p0.x, ddy = p.y - p0.y;
+      if (!moved && Math.hypot(ddx, ddy) * k < 2) return;
+      moved = true;
+      const lx = ddx * cos + ddy * sin, ly = -ddx * sin + ddy * cos; // pointer delta in the element's own axes
+      const V = Object.assign({}, V0), P = Object.assign({}, P0);
+      if (what === 'pan') {
+        P.x = PZ.clamp(P0.x + lx, V.x + V.w - P.w, V.x);
+        P.y = PZ.clamp(P0.y + ly, V.y + V.h - P.h, V.y);
+      } else if (what.startsWith('e-')) {
+        const [sx, sy] = DIRS[what.slice(2)];
+        const mw = minKept(P.w), mh = minKept(P.h);
+        if (sx < 0) { const x0 = PZ.clamp(V0.x + lx, P.x, V0.x + V0.w - mw); V.w = V0.x + V0.w - x0; V.x = x0; }
+        if (sx > 0) V.w = PZ.clamp(V0.w + lx, mw, P.x + P.w - V0.x);
+        if (sy < 0) { const y0 = PZ.clamp(V0.y + ly, P.y, V0.y + V0.h - mh); V.h = V0.y + V0.h - y0; V.y = y0; }
+        if (sy > 0) V.h = PZ.clamp(V0.h + ly, mh, P.y + P.h - V0.y);
+      } else {
+        const [sx, sy] = DIRS[what.slice(2)];
+        const ax = sx > 0 ? P0.x : P0.x + P0.w, ay = sy > 0 ? P0.y : P0.y + P0.h; // the opposite corner stays put
+        const f0 = Math.max((P0.w + sx * lx) / P0.w, (P0.h + sy * ly) / P0.h);
+        const fmin = Math.max(sx > 0 ? (V.x + V.w - ax) / P0.w : (ax - V.x) / P0.w, sy > 0 ? (V.y + V.h - ay) / P0.h : (ay - V.y) / P0.h);
+        const fmax = Math.min((V.w * 100) / (P0.w * (100 - PZ.CROP_MAX)), (V.h * 100) / (P0.h * (100 - PZ.CROP_MAX)));
+        const f = PZ.clamp(f0, fmin, Math.max(fmin, fmax));
+        P.w = P0.w * f; P.h = P0.h * f;
+        P.x = sx > 0 ? ax : ax - P.w; P.y = sy > 0 ? ay : ay - P.h;
+      }
+      applyCrop(el, o, V, P);
+      const fresh = PZ.renderElement(E.doc, el, 'edit');
+      node.replaceWith(fresh); node = fresh;
+      S.renderOverlay();
+    }, () => {
+      if (!moved) return;
+      const fin = { x: el.x, y: el.y, w: el.w, h: el.h, crop: el.crop };
+      Object.assign(el, start);
+      if (JSON.stringify(fin) === JSON.stringify(start)) { S.render(); return; }
+      E.commit('Crop', () => Object.assign(el, fin), { refresh: 'stage thumb inspector' });
+    });
   }
 
   // ---------------------------------------------------------------- text editing

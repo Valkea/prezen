@@ -54,8 +54,10 @@ Pick from the **Image** dialog (or paste / drop onto the slide):
 On export, **Embed linked images** downloads linked pictures into the file when the host allows it (CORS),
 so the slideshow also works offline.
 
-To crop a picture, select it and set **Crop** (top, bottom, left, right, in %) in the Image section. The kept part
-is placed like a whole picture (Fill / Fit / Stretch, Focus); **Fit frame to picture** resizes the frame to match it.
+To crop a picture, double-click it (or select it and press Enter): the whole picture shows dimmed around the frame;
+drag the frame's handles to crop, drag the picture to move it, its round corner handles to zoom it, then Enter, Esc
+or **Done**. The Image section also has the exact **Crop** values (top, bottom, left, right, in %); the kept part is
+placed like a whole picture (Fill / Fit / Stretch, Focus) and **Fit frame to picture** resizes the frame to match it.
 
 ### Presenting
 

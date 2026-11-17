@@ -434,6 +434,9 @@
       h('label', { class: 'ui-label', text: t('Crop') }),
       h('div', { class: 'ed-grid2' }, n('t', t('Top')), n('b', t('Bottom')), n('l', t('Left')), n('r', t('Right'))),
       h('div', { class: 'ui-btn-row' },
+        PZ.edStage.cropping() === el.id
+          ? h('button', { class: 'ui-btn ui-small ui-primary', text: t('Done cropping'), onClick: () => PZ.edStage.endCrop() })
+          : h('button', { class: 'ui-btn ui-small', title: t('Crop with the mouse on the slide (Enter or double-click)'), onClick: () => PZ.edStage.startCrop(el.id) }, PZ.icon('crop'), h('span', { text: t('Crop on slide') })),
         h('button', { class: 'ui-btn ui-small', text: t('Fit frame to picture'), title: t('Change the frame height so the whole kept part shows, without empty space'), onClick: fitFrame }),
         el.crop ? h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Reset crop'), onClick: () => live('Reset crop', () => { el.crop = null; }, true) }) : null));
   }

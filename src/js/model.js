@@ -218,7 +218,7 @@
   PZ.CROP_MAX = 90;
   PZ.normCrop = function (c) {
     if (!c || typeof c !== 'object') return null;
-    const v = (k) => PZ.round(PZ.clamp(PZ.num(c[k], 0), 0, PZ.CROP_MAX), 1);
+    const v = (k) => PZ.round(PZ.clamp(PZ.num(c[k], 0), 0, PZ.CROP_MAX), 2);
     const t = v('t'), l = v('l'), b = Math.min(v('b'), PZ.CROP_MAX - t), r = Math.min(v('r'), PZ.CROP_MAX - l);
     return t || r || b || l ? { t, r, b, l } : null;
   };

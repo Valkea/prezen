@@ -481,6 +481,7 @@
       if (E.sel.length) { e.preventDefault(); E.deleteSel(); } else if (e.target.closest('.ed-slides')) { e.preventDefault(); E.deleteSlide(); }
       return;
     }
+    if (PZ.edStage.cropping() && (k === 'Escape' || k === 'Enter')) { e.preventDefault(); PZ.edStage.endCrop(); return; }
     if (k === 'Escape') { E.select([]); return; }
     if (k.startsWith('Arrow') && E.sel.length) {
       e.preventDefault();
@@ -491,7 +492,11 @@
     }
     if ((k === 'PageDown' || (k === 'ArrowDown' && !E.sel.length)) && E.cur < E.doc.slides.length - 1) { e.preventDefault(); E.goSlide(E.cur + 1); return; }
     if ((k === 'PageUp' || (k === 'ArrowUp' && !E.sel.length)) && E.cur > 0) { e.preventDefault(); E.goSlide(E.cur - 1); return; }
-    if (k === 'Enter' && E.sel.length === 1) { const el = E.one(); if (el.type === 'text' || el.type === 'shape') { e.preventDefault(); PZ.edStage.startEdit(el.id); } return; }
+    if (k === 'Enter' && E.sel.length === 1) {
+      const el = E.one();
+      if (el.type === 'text' || el.type === 'shape') { e.preventDefault(); PZ.edStage.startEdit(el.id); } else if (el.type === 'image' && el.src) { e.preventDefault(); PZ.edStage.startCrop(el.id); }
+      return;
+    }
     if (mod || e.altKey) return;
     if (k === 't' || k === 'T') { e.preventDefault(); E.insertText(); }
     else if (k === 'i' || k === 'I') { e.preventDefault(); PZ.edDialogs.image({ onPick: (ref) => E.insertImage(ref) }); }

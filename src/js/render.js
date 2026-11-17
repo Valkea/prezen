@@ -43,6 +43,8 @@
     return parts.join(' ');
   }
 
+  PZ.imageFilters = filters;
+
   function missing(body, label, mode) {
     body.classList.add('pz-missing');
     body.appendChild(h('div', { class: 'pz-missing-in' }, PZ.icon('image'), mode === 'edit' ? h('span', { text: label }) : null));
