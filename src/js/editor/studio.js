@@ -150,8 +150,10 @@
       if (key !== 'delay' && key !== 'trigger') replay();
     }
     const useBox = h('div', { class: 'st-use' });
+    const topActions = h('div', { class: 'ui-btn-row st-actions' }); // "Use…" buttons, in the sticky top bar
     function renderUse() {
       useBox.textContent = '';
+      topActions.textContent = '';
       const isTr = fx.kind === 'transition';
       const one = E.one();
       const on = applied();
@@ -162,7 +164,7 @@
       useBox.appendChild(ui.row(t('Duration'), ui.slider(use.duration, (v, done) => setUse('duration', v, done), { min: 100, max: isTr ? 3000 : 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       if (!isTr && one) useBox.appendChild(ui.row(t('Delay'), ui.slider(use.delay, (v, done) => setUse('delay', v, done), { min: 0, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       useBox.appendChild(ui.row(t('Easing'), ui.select(use.easing, [{ value: '', label: t('Effect default') }].concat(PZ.EASINGS.map((e) => ({ value: e.id, label: t(e.name) }))), (v) => setUse('easing', v, true))));
-      const actions = h('div', { class: 'ui-btn-row' });
+      const actions = topActions;
       const timing = () => ({ effect: fx.id, duration: use.duration, easing: use.easing });
       if (isTr) {
         if (!on) actions.appendChild(h('button', { class: 'ui-btn ui-primary ui-small', text: E.cur > 0 ? t('Use from slide {a} to {b}', { a: E.cur, b: E.cur + 1 }) : t('Use on this slide'), onClick: () => { E.commit('Transition', (d, s) => { s.transition = timing(); }); PZ.toast(t('Transition set on slide {n}', { n: E.cur + 1 })); renderList(); renderUse(); } }));
@@ -173,7 +175,6 @@
           PZ.toast(t('Animation applied')); renderList(); renderUse();
         } }));
       }
-      if (actions.childNodes.length) useBox.appendChild(actions);
     }
 
     // ---- editor of custom effects
@@ -228,6 +229,7 @@
 
     function renderEditor() {
       editor.textContent = '';
+      topActions.textContent = '';
       title.textContent = fx ? PZ.fxName(fx) : '';
       if (!fx) return;
       renderUse();
@@ -235,13 +237,15 @@
       if (!isCustom) {
         editor.appendChild(h('div', { class: 'ui-btn-row' }, h('button', { class: 'ui-btn ui-small', onClick: () => createFrom(fx) }, PZ.icon('copy'), h('span', { text: t('Customize a copy') }))));
         editor.appendChild(h('p', { class: 'ed-hint', text: t('Built-in effects are read-only. “Customize a copy” to change its keyframes, timing and pivot: your version is saved inside this presentation (and in its exports and links).') }));
-        editor.appendChild(h('pre', { class: 'st-json', text: JSON.stringify(Object.assign({}, fx, { builtin: undefined }), null, 1) }));
+        editor.appendChild(h('details', { class: 'st-adv' }, h('summary', { text: t('Show as JSON') }),
+          h('pre', { class: 'st-json', text: JSON.stringify(Object.assign({}, fx, { builtin: undefined }), null, 1) })));
         return;
       }
-      editor.appendChild(h('div', { class: 'st-sub', text: t('Effect definition') }));
-      editor.appendChild(ui.row(t('Name'), ui.text(fx.name, (v, done) => { fx.name = v || t('Custom effect'); if (done) save(); })));
+      const def = h('div', { class: 'st-use st-def' }, h('div', { class: 'st-use-head' }, h('b', { text: t('Effect definition') })));
+      editor.appendChild(def);
+      def.appendChild(ui.row(t('Name'), ui.text(fx.name, (v, done) => { fx.name = v || t('Custom effect'); if (done) save(); })));
       // the effect's own timing: what it starts with when picked for a slide or an element
-      editor.appendChild(ui.row(t('Default duration'), ui.slider(fx.duration, (v, done) => {
+      def.appendChild(ui.row(t('Default duration'), ui.slider(fx.duration, (v, done) => {
         const follow = !applied() && use.duration === defDuration(fx);
         fx.duration = v;
         if (follow) { use.duration = defDuration(fx); renderUse(); }
@@ -250,22 +254,22 @@
       const presets = PZ.EASINGS.map((e) => ({ value: e.id, label: t(e.name) })).concat([{ value: 'custom', label: t('Custom cubic-bezier…') }]);
       const isPreset = PZ.EASINGS.some((e) => e.id === fx.easing) || !fx.easing;
       const bez = ui.text(isPreset ? '' : fx.easing, (v, done) => { if (done) { fx.easing = v.trim(); save(); } }, { mono: true, placeholder: 'cubic-bezier(.2,.8,.2,1)' });
-      editor.appendChild(ui.row(t('Default easing'), ui.select(isPreset ? fx.easing || 'smooth' : 'custom', presets, (v) => { if (v !== 'custom') { fx.easing = v; save(); } else bez.focus(); }), bez));
+      def.appendChild(ui.row(t('Default easing'), ui.select(isPreset ? fx.easing || 'smooth' : 'custom', presets, (v) => { if (v !== 'custom') { fx.easing = v; save(); } else bez.focus(); }), bez));
       const sceneKind = fx.kind === 'transition' ? 'transition' : 'element';
       const scenes = Object.values(PZ.SCENES).filter((sc) => sc.kind === sceneKind);
       if (E.funOn() || fx.scene) {
-        editor.appendChild(ui.row(t('Particles'), ui.select(fx.scene || '', [{ value: '', label: t('None') }].concat(scenes.map((sc) => ({ value: sc.id, label: t(sc.name) }))),
+        def.appendChild(ui.row(t('Particles'), ui.select(fx.scene || '', [{ value: '', label: t('None') }].concat(scenes.map((sc) => ({ value: sc.id, label: t(sc.name) }))),
           (v) => { if (v) fx.scene = v; else delete fx.scene; save(); })));
       }
       if (fx.kind === 'transition') {
-        editor.appendChild(ui.row(t('Layers'), ui.toggle(fx.inTop !== false, (v) => { fx.inTop = v; save(); }, t('Incoming slide on top'))));
-        editor.appendChild(framesTable(t('Incoming slide'), fx.in, save, 'inOrigin'));
-        editor.appendChild(framesTable(t('Outgoing slide'), fx.out, save, 'outOrigin'));
+        def.appendChild(ui.row(t('Layers'), ui.toggle(fx.inTop !== false, (v) => { fx.inTop = v; save(); }, t('Incoming slide on top'))));
+        def.appendChild(framesTable(t('Incoming slide'), fx.in, save, 'inOrigin'));
+        def.appendChild(framesTable(t('Outgoing slide'), fx.out, save, 'outOrigin'));
       } else {
-        editor.appendChild(ui.row(t('Type'), ui.seg(fx.kind, [{ value: 'in', label: t('Entrance') }, { value: 'emph', label: t('Emphasis') }, { value: 'out', label: t('Exit') }], (v) => { fx.kind = v; kind = v; save(); renderList(); syncKinds(); })));
-        editor.appendChild(framesTable(t('Element'), fx.frames, save, 'origin'));
+        def.appendChild(ui.row(t('Type'), ui.seg(fx.kind, [{ value: 'in', label: t('Entrance') }, { value: 'emph', label: t('Emphasis') }, { value: 'out', label: t('Exit') }], (v) => { fx.kind = v; kind = v; save(); renderList(); syncKinds(); })));
+        def.appendChild(framesTable(t('Element'), fx.frames, save, 'origin'));
       }
-      editor.appendChild(h('p', { class: 'ed-hint', text: t('Empty cell = neutral value. Move X/Y are % of the slide size, so 100 = one full slide width/height. Clip accepts inset(), circle(), ellipse() or polygon() — use the same kind on every keyframe.') }));
+      def.appendChild(h('p', { class: 'ed-hint', text: t('Empty cell = neutral value. Move X/Y are % of the slide size, so 100 = one full slide width/height. Clip accepts inset(), circle(), ellipse() or polygon() — use the same kind on every keyframe.') }));
       const json = h('textarea', { class: 'ui-textarea ui-mono st-json-edit', rows: 8 });
       json.value = JSON.stringify(fx, null, 1);
       editor.appendChild(h('details', { class: 'st-adv' }, h('summary', { text: t('Advanced: edit as JSON') }), json,
@@ -300,9 +304,10 @@
       title: scope === 'transition' ? t('Transition studio') : scope === 'element' ? t('Animation studio') : t('Transition & animation studio'), cls: 'st-modal', wide: true,
       content: h('div', { class: 'st' },
         h('div', { class: 'st-left' }, kindTabs, listEl),
-        h('div', { class: 'st-right' }, h('div', { class: 'st-top' }, title,
-          h('div', { class: 'ui-btn-row' }, h('button', { class: 'ui-btn ui-small', onClick: play }, PZ.icon('play'), h('span', { text: t('Play') })),
-            ui.toggle(true, (v) => { loop = v; if (v) play(); else clearTimeout(loopTimer); }, t('Loop')))), preview, editor)),
+        h('div', { class: 'st-right' }, h('div', { class: 'st-top' }, title, topActions),
+          h('div', { class: 'st-view' }, preview,
+            h('div', { class: 'ui-btn-row st-play' }, h('button', { class: 'ui-btn ui-small', onClick: play }, PZ.icon('play'), h('span', { text: t('Play') })),
+              ui.toggle(true, (v) => { loop = v; if (v) play(); else clearTimeout(loopTimer); }, t('Loop')))), editor)),
       onClose: () => clearTimeout(loopTimer),
     });
     syncKinds();

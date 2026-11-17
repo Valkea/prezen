@@ -308,7 +308,10 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .st-new { margin-top: 8px; }
 .st-right { min-width: 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
 .st-right > * { flex: none; }
-.st-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.st-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; position: sticky; top: 0; z-index: 3; background: var(--panel); padding: 2px 0 8px; }
+.st-actions { margin: 0; }
+.st-view { border-radius: 12px; background: var(--canvas); }
+.st-play { justify-content: center; align-items: center; margin: 0; padding: 0 14px 12px; }
 .st-title { font-weight: 700; font-size: 15px; }
 .st-preview { display: flex; justify-content: center; padding: 14px; border-radius: 12px; background: var(--canvas); min-height: 200px; }
 .st-stage { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); background: #000; }

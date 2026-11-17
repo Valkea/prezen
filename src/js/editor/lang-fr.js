@@ -532,6 +532,7 @@
     'Element': 'Élément',
     'Empty cell = neutral value. Move X/Y are % of the slide size, so 100 = one full slide width/height. Clip accepts inset(), circle(), ellipse() or polygon() — use the same kind on every keyframe.': 'Case vide = valeur neutre. Déplacement X/Y en % de la taille de la diapositive : 100 = une largeur/hauteur complète. La découpe accepte inset(), circle(), ellipse() ou polygon() — utilisez le même type sur chaque image clé.',
     'Advanced: edit as JSON': 'Avancé : modifier en JSON',
+    'Show as JSON': 'Voir en JSON',
     'Apply JSON': 'Appliquer le JSON',
     'Invalid effect': 'Effet invalide',
     'Invalid JSON: {msg}': 'JSON invalide : {msg}',
