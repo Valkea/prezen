@@ -345,6 +345,7 @@
 
   D.about = function () {
     ui.modal({ title: t('About PrezEn'), content: [
+      h('p', { class: 'dlg-about-link' }, h('a', { href: PZ.PUBLIC_URL, target: '_blank', rel: 'noopener', text: PZ.PUBLIC_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') })),
       h('p', { text: t('PrezEn {version} builds presentations entirely in your browser. No account, no server, no tracking.', { version: PZ.VERSION }) }),
       h('ul', { class: 'dlg-list' },
         h('li', { text: t('Your work is saved in this browser (IndexedDB) and in the files you export.') }),
