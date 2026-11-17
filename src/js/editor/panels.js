@@ -191,7 +191,7 @@
       bgBody.appendChild(ui.row(t('Tint %'), ui.slider(Math.round(bg.overlayOpacity * 100), set('Background', (v) => { bg.overlayOpacity = v / 100; }), { min: 0, max: 100, fmt: (v) => v + '%' })));
     }
     bgBody.appendChild(h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Apply to all slides'), onClick: () => E.commit('Background on all slides', (d) => d.slides.forEach((x) => { x.bg = PZ.clone(bg); })) }));
-    pane.appendChild(ui.section('Background', bgBody));
+    pane.appendChild(ui.section('Background', bgBody, { open: true }));
 
     const tr = s.transition;
     const fx = PZ.getEffect(E.doc, tr.effect);
@@ -204,9 +204,9 @@
       h('div', { class: 'ui-btn-row' },
         h('button', { class: 'ui-btn ui-small', disabled: !(fx && fx.id !== 'none'), onClick: () => previewTransition(tr) }, PZ.icon('play'), h('span', { text: t('Preview') })),
         h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Apply to all'), onClick: () => E.commit('Transition on all slides', (d) => d.slides.forEach((x) => { x.transition = PZ.clone(tr); })) }),
-        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'transition', select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') }))))));
+        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'transition', select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') })))), { open: true }));
 
-    animOrderSection();
+    animOrderSection(true);
 
     pane.appendChild(ui.section('Playback', h('div', null,
       ui.row(t('Auto-advance'), ui.number(s.auto, set('Auto-advance', (v) => { s.auto = v; }), { min: 0, max: 3600, step: 1, unit: 's', title: t('0 = wait for a click') })),
@@ -217,7 +217,7 @@
 
   /** "Animation order" section, shown in every panel as soon as the current slide has an animation.
    *  Hovering a row plays that element's animation on the stage; rows of selected elements are highlighted. */
-  function animOrderSection() {
+  function animOrderSection(open) {
     const s = E.slide();
     const animated = s.els.filter((e) => e.anim).sort((a, b) => (a.anim.order || 0) - (b.anim.order || 0));
     if (!animated.length) return;
@@ -235,7 +235,7 @@
       listEl.appendChild(row);
     });
     listEl.addEventListener('mouseleave', stopHover);
-    pane.appendChild(ui.section('Animation order', listEl));
+    pane.appendChild(ui.section('Animation order', listEl, { open: !!open }));
   }
 
   function reorderAnim(animated, n, d) {
@@ -298,11 +298,11 @@
     ]);
     // the box shadow is part of the element's look: it lives in its main style section
     const withShadow = (body) => { body.appendChild(ui.row(t('Shadow'), ui.select(el.shadow, Object.entries(PZ.SHADOWS).filter(([k2]) => k2 !== 'text').map(([k2, v]) => ({ value: k2, label: t(v.name) })), set('Shadow', (v) => { el.shadow = v; })))); return body; };
-    if (el.type === 'text') pane.appendChild(ui.section('Text', withShadow(textControls(el, true))));
-    if (el.type === 'shape') { pane.appendChild(ui.section('Shape', withShadow(shapeControls(el)))); pane.appendChild(ui.section('Text in shape', textControls(el, false))); }
-    if (el.type === 'image') pane.appendChild(ui.section('Image', withShadow(imageControls(el))));
-    if (el.type === 'icon') pane.appendChild(ui.section('Icon', withShadow(iconControls(el))));
-    pane.appendChild(ui.section('Position & size', positionControls(el)));
+    if (el.type === 'text') pane.appendChild(ui.section('Text', withShadow(textControls(el, true)), { open: true }));
+    if (el.type === 'shape') { pane.appendChild(ui.section('Shape', withShadow(shapeControls(el)), { open: true })); pane.appendChild(ui.section('Text in shape', textControls(el, false), { open: true })); }
+    if (el.type === 'image') pane.appendChild(ui.section('Image', withShadow(imageControls(el)), { open: true }));
+    if (el.type === 'icon') pane.appendChild(ui.section('Icon', withShadow(iconControls(el)), { open: true }));
+    pane.appendChild(ui.section('Position & size', positionControls(el), { open: true }));
     pane.appendChild(ui.section('Animation', animControls(el)));
     animOrderSection();
     pane.appendChild(ui.section('Link', h('div', null,

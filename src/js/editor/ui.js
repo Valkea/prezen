@@ -93,13 +93,13 @@
   ui.row = (label, ...controls) => h('div', { class: 'ui-row' }, label ? h('label', { class: 'ui-row-label', text: label }) : null, h('div', { class: 'ui-row-ctl' }, controls));
 
   /** Collapsible section. title is the English text: translated here, and its open/closed state is kept across languages.
-   *  Closed until the user opens it (see ui.openFirst for the panel's first section); then the user's choice is remembered. */
+   *  Closed by default (o.open: true opens it; see also ui.openFirst); once the user toggles it, their choice is remembered. */
   ui.section = function (title, content, o) {
     o = o || {};
     const key = 'prezen:sec:' + title;
     let stored = null;
     try { stored = localStorage.getItem(key); } catch (e) { /* ignore */ }
-    const closed = stored !== '0';
+    const closed = stored == null ? !o.open : stored !== '0';
     const sec = h('section', { class: 'ui-sec' + (closed ? ' ui-closed' : ''), 'data-stored': stored == null ? null : stored },
       h('button', { class: 'ui-sec-head', onClick: () => { sec.classList.toggle('ui-closed'); try { localStorage.setItem(key, sec.classList.contains('ui-closed') ? '1' : '0'); } catch (e) { /* ignore */ } } },
         h('span', { text: t(title) }), o.extra || null, PZ.icon('chevron-down', 'ui-sec-chev')),
