@@ -156,7 +156,7 @@
   const styleOf = (doc, o, defaults) => PZ.defaultTextStyle(doc.theme, Object.assign({}, defaults, o && o.style));
   PZ.make = {
     text: (doc, o) => base('text', Object.assign({ html: 'Text', autoH: true }, o, { style: styleOf(doc, o) })),
-    image: (doc, o) => base('image', Object.assign({ src: '', fit: 'cover', pos: '50% 50%', radius: 0, bw: 0, bc: '#ffffff', alt: '', flip: false, filters: null }, o)),
+    image: (doc, o) => base('image', Object.assign({ src: '', fit: 'cover', pos: '50% 50%', radius: 0, bw: 0, bc: '#ffffff', alt: '', flip: false, filters: null, crop: null }, o)),
     shape: (doc, o) => base('shape', Object.assign({ shape: 'rect', fill: (doc.theme && doc.theme.accent) || '#5b5bf0', fill2: '', gangle: 135,
       stroke: '', sw: 0, dash: '', radius: 0, html: '' }, o, { style: styleOf(doc, o, SHAPE_TEXT) })),
     icon: (doc, o) => base('icon', Object.assign({ svg: '', name: '', color: (doc.theme && doc.theme.accent) || '#5b5bf0', sw: 0 }, o)),
@@ -213,6 +213,15 @@
   const ALIGN = new Set(['left', 'center', 'right', 'justify']);
   const VALIGN = new Set(['top', 'middle', 'bottom']);
   const FITS = new Set(['cover', 'contain', 'fill']);
+
+  /** Image crop: percent cut from each edge of the picture (as shown, mirror included); at least 10 % stays visible. */
+  PZ.CROP_MAX = 90;
+  PZ.normCrop = function (c) {
+    if (!c || typeof c !== 'object') return null;
+    const v = (k) => PZ.round(PZ.clamp(PZ.num(c[k], 0), 0, PZ.CROP_MAX), 1);
+    const t = v('t'), l = v('l'), b = Math.min(v('b'), PZ.CROP_MAX - t), r = Math.min(v('r'), PZ.CROP_MAX - l);
+    return t || r || b || l ? { t, r, b, l } : null;
+  };
   const TRIGGERS = new Set(['click', 'with', 'after']);
   const N = PZ.num, S = PZ.str, C = (v, d) => (typeof v === 'string' && PZ.isColor(v) ? v : d);
   const id = (v, p) => (typeof v === 'string' && /^[\w-]{1,40}$/.test(v) ? v : PZ.uid(p));
@@ -252,6 +261,7 @@
       el.pos = typeof e.pos === 'string' && /^\d{1,3}% \d{1,3}%$/.test(e.pos) ? e.pos : '50% 50%';
       el.radius = PZ.clamp(N(e.radius, 0), 0, 2000); el.bw = PZ.clamp(N(e.bw, 0), 0, 200); el.bc = C(e.bc, '#ffffff');
       el.alt = S(e.alt, '', 500); el.flip = !!e.flip;
+      el.crop = PZ.normCrop(e.crop);
       const f = e.filters && typeof e.filters === 'object' ? e.filters : null;
       el.filters = f ? { brightness: PZ.clamp(N(f.brightness, 100), 0, 300), contrast: PZ.clamp(N(f.contrast, 100), 0, 300),
         saturate: PZ.clamp(N(f.saturate, 100), 0, 300), grayscale: PZ.clamp(N(f.grayscale, 0), 0, 100), blur: PZ.clamp(N(f.blur, 0), 0, 50) } : null;

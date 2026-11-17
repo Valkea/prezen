@@ -48,6 +48,36 @@
     body.appendChild(h('div', { class: 'pz-missing-in' }, PZ.icon('image'), mode === 'edit' ? h('span', { text: label }) : null));
   }
 
+  // natural width / height of each picture already seen, so re-rendering a cropped one does not blink
+  const ratios = new Map();
+
+  /** A cropped picture: .pz-crop is the kept rectangle, placed in the box the way a whole picture would be
+   *  (fill / fit / stretch, focus); the picture inside it is enlarged and shifted so only that part shows.
+   *  Sizes use container units of the box, so resizing the element needs no re-render. */
+  function cropFrame(el, img, box) {
+    const c = el.crop;
+    const kw = 100 / (100 - c.l - c.r), kh = 100 / (100 - c.t - c.b);
+    const s = img.style;
+    s.objectFit = 'fill'; s.objectPosition = '';
+    s.width = kw * 100 + '%'; s.height = kh * 100 + '%'; s.left = -c.l * kw + '%'; s.top = -c.t * kh + '%';
+    const [px, py] = (el.pos || '50% 50%').split(' ').map((v) => parseFloat(v) / 100);
+    const frame = h('div', { class: 'pz-crop pz-crop-' + el.fit, style: { '--px': String(px), '--py': String(py) } }, img);
+    box.classList.add('pz-cropped');
+    if (el.fit !== 'fill') { // fill and fit need the kept rectangle's proportions, known once the picture loads
+      const apply = (r) => frame.style.setProperty('--ar', String(r * kh / kw));
+      const known = ratios.get(el.src);
+      if (known) apply(known); else frame.style.visibility = 'hidden';
+      img.addEventListener('load', () => {
+        if (!img.naturalWidth || !img.naturalHeight) return;
+        const r = img.naturalWidth / img.naturalHeight;
+        if (ratios.size > 300) ratios.clear();
+        ratios.set(el.src, r);
+        apply(r); frame.style.visibility = '';
+      });
+    }
+    return frame;
+  }
+
   const iconCache = new Map();
   function iconMarkup(el) {
     const key = el.svg;
@@ -83,8 +113,9 @@
         if (el.flip) img.style.transform = 'scaleX(-1)';
         const fl = filters(el.filters);
         if (fl) img.style.filter = fl;
-        PZ.setImgSrc(img, el.src, doc, (ref) => { img.remove(); missing(box, PZ.t('Image not found: {ref}', { ref: ref.slice(0, 80) }), mode); });
-        box.appendChild(img);
+        const node = el.crop ? cropFrame(el, img, box) : img;
+        PZ.setImgSrc(img, el.src, doc, (ref) => { node.remove(); missing(box, PZ.t('Image not found: {ref}', { ref: ref.slice(0, 80) }), mode); });
+        box.appendChild(node);
       }
       body.appendChild(box);
     } else if (el.type === 'shape') {

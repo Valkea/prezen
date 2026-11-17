@@ -396,6 +396,7 @@
     if (el.fit === 'cover') {
       box.appendChild(ui.row(t('Focus'), ui.select(el.pos, [['50% 50%', 'Center'], ['50% 0%', 'Top'], ['50% 100%', 'Bottom'], ['0% 50%', 'Left'], ['100% 50%', 'Right'], ['0% 0%', 'Top left'], ['100% 0%', 'Top right'], ['0% 100%', 'Bottom left'], ['100% 100%', 'Bottom right']].map(([v, l]) => ({ value: v, label: t(l) })), set('Image focus', (v) => { el.pos = v; }))));
     }
+    if (el.src) box.appendChild(cropControls(el));
     box.appendChild(ui.row(t('Corners'), ui.slider(el.radius, set('Corner radius', (v) => { el.radius = v; }), { min: 0, max: Math.round(Math.min(el.w, el.h) / 2) })));
     box.appendChild(ui.row(t('Border'), ui.number(el.bw, set('Border', (v) => { el.bw = v; }), { min: 0, max: 200, unit: 'px' }), ui.color(el.bc, set('Border colour', (v) => { el.bc = v || '#ffffff'; }))));
     box.appendChild(ui.row(t('Mirror'), ui.toggle(el.flip, set('Mirror', (v) => { el.flip = v; }))));
@@ -408,6 +409,33 @@
     box.appendChild(ui.row(t('Blur'), ui.slider(f.blur, fset('blur'), { min: 0, max: 30, fmt: (v) => v + 'px' })));
     box.appendChild(ui.row(t('Alt text'), ui.text(el.alt, set('Alt text', (v) => { el.alt = v; }), { placeholder: t('Describe the picture') })));
     return box;
+  }
+
+  /** Crop: percent cut from each edge of the picture as shown; the kept part is placed with Fit and Focus like a whole picture. */
+  function cropControls(el) {
+    const c = el.crop || { t: 0, r: 0, b: 0, l: 0 };
+    const OPP = { t: 'b', b: 't', l: 'r', r: 'l' };
+    const n = (key, label) => ui.number(c[key], set('Crop', (v) => {
+      const next = Object.assign({ t: 0, r: 0, b: 0, l: 0 }, el.crop);
+      next[key] = Math.min(v, PZ.CROP_MAX - next[OPP[key]]);
+      el.crop = PZ.normCrop(next);
+    }, true), { label, min: 0, max: PZ.CROP_MAX - c[OPP[key]], unit: '%', step: 1 });
+    const fitFrame = async () => {
+      const size = await PZ.imageSize(el.src, E.doc);
+      if (!size || !size.w || !size.h) { PZ.toast(t('The picture could not be loaded.'), { type: 'warn' }); return; }
+      const k = el.crop || { t: 0, r: 0, b: 0, l: 0 };
+      const ratio = (size.w * (100 - k.l - k.r)) / (size.h * (100 - k.t - k.b));
+      live('Fit frame to picture', () => {
+        const h2 = Math.max(1, Math.round((el.w - 2 * el.bw) / ratio + 2 * el.bw));
+        el.y = Math.round(el.y + (el.h - h2) / 2); el.h = h2;
+      }, true);
+    };
+    return h('div', null,
+      h('label', { class: 'ui-label', text: t('Crop') }),
+      h('div', { class: 'ed-grid2' }, n('t', t('Top')), n('b', t('Bottom')), n('l', t('Left')), n('r', t('Right'))),
+      h('div', { class: 'ui-btn-row' },
+        h('button', { class: 'ui-btn ui-small', text: t('Fit frame to picture'), title: t('Change the frame height so the whole kept part shows, without empty space'), onClick: fitFrame }),
+        el.crop ? h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Reset crop'), onClick: () => live('Reset crop', () => { el.crop = null; }, true) }) : null));
   }
 
   function iconControls(el) {

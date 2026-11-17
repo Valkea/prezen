@@ -54,6 +54,9 @@ Pick from the **Image** dialog (or paste / drop onto the slide):
 On export, **Embed linked images** downloads linked pictures into the file when the host allows it (CORS),
 so the slideshow also works offline.
 
+To crop a picture, select it and set **Crop** (top, bottom, left, right, in %) in the Image section. The kept part
+is placed like a whole picture (Fill / Fit / Stretch, Focus); **Fit frame to picture** resizes the frame to match it.
+
 ### Presenting
 
 <kbd>→</kbd> <kbd>Space</kbd> <kbd>PgDn</kbd> next (clickers work) · <kbd>←</kbd> previous · <kbd>O</kbd> overview ·
@@ -135,4 +138,4 @@ use it. Nothing else: no analytics, no cookies.
 
 - Optional tiny server with simple accounts to store and list share links across devices.
 - Canvas mode (Prezi-style zooming between slides placed on a large map).
-- Grouping, tables and charts, image cropping, more layouts and themes.
+- Grouping, tables and charts, more layouts and themes.
