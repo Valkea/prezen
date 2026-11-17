@@ -16,7 +16,7 @@
     'Shapes': 'Formes',
     'Icons': 'Icônes',
     'Icon': 'Icône',
-    'Transitions': 'Transitions',
+    'Animations': 'Animations',
     'Add text (T)': 'Ajouter du texte (T)',
     'Add image (I)': 'Ajouter une image (I)',
     'Transition & animation studio': 'Studio de transitions et d’animations',

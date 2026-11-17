@@ -437,7 +437,7 @@
         tb('image', t('Image'), () => PZ.edDialogs.image({ onPick: (ref) => E.insertImage(ref) }), { title: t('Add image (I)') }),
         tb('shapes', t('Shapes'), (a) => shapesMenu(a)),
         tb('star', t('Icons'), () => PZ.edDialogs.icons({ onPick: (svg, name) => E.insertIcon(svg, name) })),
-        tb('sparkles', t('Transitions'), () => PZ.edStudio.open(), { title: t('Transition & animation studio') })),
+        tb('sparkles', t('Animations'), () => PZ.edStudio.open(), { title: t('Transition & animation studio') })),
       h('div', { class: 'ed-grow' }),
       h('div', { class: 'ed-tb-group' },
         tb('library', '', () => PZ.edDialogs.library(), { title: t('My presentations') }),
