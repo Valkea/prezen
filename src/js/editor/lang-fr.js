@@ -251,7 +251,6 @@
     'Delete (Del)': 'Supprimer (Suppr)',
     'Text in shape': 'Texte dans la forme',
     'Position & size': 'Position et taille',
-    'Effects & link': 'Effets et lien',
     'https://…  or  #3 (slide 3)': 'https://…  ou  #3 (diapositive 3)',
     'Links must start with https://, mailto: or be a slide number like #3.': 'Les liens doivent commencer par https://, mailto: ou être un numéro de diapositive comme #3.',
     'In the presentation, clicking the element opens the link or jumps to the slide.': 'Pendant la présentation, cliquer sur l’élément ouvre le lien ou affiche la diapositive.',

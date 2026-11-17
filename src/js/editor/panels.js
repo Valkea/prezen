@@ -296,15 +296,16 @@
       ui.iconBtn('copy', t('Duplicate (Ctrl+D)'), () => E.duplicateSel()),
       ui.iconBtn('trash', t('Delete (Del)'), () => E.deleteSel()),
     ]);
-    if (el.type === 'text') pane.appendChild(ui.section('Text', textControls(el, true)));
-    if (el.type === 'shape') { pane.appendChild(ui.section('Shape', shapeControls(el))); pane.appendChild(ui.section('Text in shape', textControls(el, false))); }
-    if (el.type === 'image') pane.appendChild(ui.section('Image', imageControls(el)));
-    if (el.type === 'icon') pane.appendChild(ui.section('Icon', iconControls(el)));
+    // the box shadow is part of the element's look: it lives in its main style section
+    const withShadow = (body) => { body.appendChild(ui.row(t('Shadow'), ui.select(el.shadow, Object.entries(PZ.SHADOWS).filter(([k2]) => k2 !== 'text').map(([k2, v]) => ({ value: k2, label: t(v.name) })), set('Shadow', (v) => { el.shadow = v; })))); return body; };
+    if (el.type === 'text') pane.appendChild(ui.section('Text', withShadow(textControls(el, true))));
+    if (el.type === 'shape') { pane.appendChild(ui.section('Shape', withShadow(shapeControls(el)))); pane.appendChild(ui.section('Text in shape', textControls(el, false))); }
+    if (el.type === 'image') pane.appendChild(ui.section('Image', withShadow(imageControls(el))));
+    if (el.type === 'icon') pane.appendChild(ui.section('Icon', withShadow(iconControls(el))));
     pane.appendChild(ui.section('Position & size', positionControls(el)));
     pane.appendChild(ui.section('Animation', animControls(el)));
     animOrderSection();
-    pane.appendChild(ui.section('Effects & link', h('div', null,
-      ui.row(t('Shadow'), ui.select(el.shadow, Object.entries(PZ.SHADOWS).filter(([k2]) => k2 !== 'text').map(([k2, v]) => ({ value: k2, label: t(v.name) })), set('Shadow', (v) => { el.shadow = v; }))),
+    pane.appendChild(ui.section('Link', h('div', null,
       ui.row(t('Link'), ui.text(el.link, (v, done) => { if (done) live('Link', () => { el.link = PZ.safeLink(v.trim()); }, true); }, { placeholder: t('https://…  or  #3 (slide 3)') })),
       el.link && !PZ.safeLink(el.link) ? h('p', { class: 'ed-hint ed-warn', text: t('Links must start with https://, mailto: or be a slide number like #3.') }) : null,
       h('p', { class: 'ed-hint', text: t('In the presentation, clicking the element opens the link or jumps to the slide.') }))));
