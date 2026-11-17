@@ -474,6 +474,7 @@
     'Only these requests leave your device: images you link to, Google Fonts when a slide uses one, and the online icon search (Iconify) when you use it.': 'Seules ces requêtes quittent votre appareil : les images que vous liez, les Google Fonts quand une diapositive en utilise, et la recherche d’icônes en ligne (Iconify) quand vous l’utilisez.',
     'Exported files contain everything they need and run offline from any folder or flashdrive.': 'Les fichiers exportés contiennent tout ce qu’il leur faut et fonctionnent hors ligne depuis n’importe quel dossier ou clé USB.',
     'The interface language is remembered in this browser and saved inside exported files.': 'La langue de l’interface est mémorisée dans ce navigateur et enregistrée dans les fichiers exportés.',
+    'Made with love for my son Enki and his friends.': 'Fait avec amour pour mon fils Enki et ses amis.',
 
     // ---------------------------------------------------------------- studio
     'Slide A': 'Diapositive A',

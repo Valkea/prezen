@@ -3,7 +3,7 @@
 (function (PZ) {
   'use strict';
 
-  PZ.VERSION = '0.1.0';
+  PZ.VERSION = '0.1.1';
   PZ.APP = 'PrezEn';
   // Where the hosted app lives. Share links point here when the app runs from a local file.
   PZ.PUBLIC_URL = 'https://valkea.github.io/prezen/';

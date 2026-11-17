@@ -353,6 +353,7 @@
         h('li', { text: t('Only these requests leave your device: images you link to, Google Fonts when a slide uses one, and the online icon search (Iconify) when you use it.') }),
         h('li', { text: t('Exported files contain everything they need and run offline from any folder or flashdrive.') }),
         h('li', { text: t('The interface language is remembered in this browser and saved inside exported files.') })),
+      h('p', { class: 'dlg-dedication', text: t('Made with love for my son Enki and his friends.') }),
     ] });
   };
 })(window.PZ = window.PZ || {});
