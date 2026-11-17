@@ -264,19 +264,21 @@
   };
 
   /** When an element animation starts: a menu with plain wording plus a line saying what happens during the show.
-   *  o.first: the element is (or would be) the first animation of its slide, where "with / after the previous one"
-   *  means "as soon as the slide appears". */
+   *  o.first: the element is (or would be) the first animation of its slide: there "with" plays during the slide
+   *  transition and "after" once it has ended. */
   ui.trigger = function (value, onChange, o) {
     const first = !!(o && o.first);
     const hint = h('p', { class: 'ed-hint ui-trigger-hint' });
     const explain = (v) => {
       hint.textContent = v === 'click' ? t('Waits for a click (or the → key) during the presentation.')
-        : first ? t('First animation of the slide: starts by itself as soon as the slide appears.')
+        : first ? (v === 'with' ? t('Starts by itself during the slide change, at the same time as the transition.') : t('Starts by itself once the slide change (transition) has ended.'))
           : v === 'with' ? t('Starts at the same time as the previous animation.') : t('Starts once the previous animation has finished.');
     };
     explain(value);
-    const sel = ui.select(value, [{ value: 'click', label: t('On click') }, { value: 'with', label: t('With the previous one') }, { value: 'after', label: t('After the previous one') }],
-      (v) => { explain(v); onChange(v, true); });
+    const sel = ui.select(value, [{ value: 'click', label: t('On click') },
+      { value: 'with', label: first ? t('On slide change') : t('With the previous one') },
+      { value: 'after', label: first ? t('After slide change') : t('After the previous one') }],
+    (v) => { explain(v); onChange(v, true); });
     return h('div', null, ui.row(t('Starts'), sel), hint);
   };
 

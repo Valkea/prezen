@@ -166,8 +166,11 @@ test('animation steps: click / with / after', () => {
   const steps = PZ.buildSteps(d, s);
   assert.equal(steps.length, 2);
   assert.equal(steps[0].auto, true);
+  assert.equal(steps[0].withSlide, true);
   assert.deepEqual(plain(steps[0].items.map((i) => i.start)), [0, 500]);
   assert.equal(steps[1].auto, false);
+  s.els[0].anim.trigger = 'after';
+  assert.equal(PZ.buildSteps(d, s)[0].withSlide, false);
   assert.deepEqual(plain(steps[1].items.map((i) => [i.kind, i.start])), [['in', 0], ['out', 100], ['emph', 600]]);
 });
 

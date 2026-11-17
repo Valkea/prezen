@@ -16,7 +16,8 @@
       const dur = a.duration || fx.duration || 600;
       let start;
       if (!cur || a.trigger === 'click') {
-        cur = { items: [], auto: !cur && a.trigger !== 'click' };
+        // first step started automatically: 'with' plays during the slide transition, 'after' once it has ended
+        cur = { items: [], auto: !cur && a.trigger !== 'click', withSlide: !cur && a.trigger === 'with' };
         steps.push(cur);
         start = a.delay || 0;
       } else if (a.trigger === 'with') start = prevStart + (a.delay || 0);
@@ -151,6 +152,9 @@
       this.cur = next;
       this.pos = pos;
       this.updateUi();
+      const first = next.step === 0 && next.steps[0] && next.steps[0].auto;
+      const early = first && next.steps[0].withSlide && prev && !o.instant;
+      if (early) this.playStep(); // plays alongside the transition
       if (prev && !o.instant) {
         const t = (o.reverse ? prev.slide : next.slide).transition || {};
         const tr = PZ.runTransition({
@@ -164,8 +168,8 @@
       if (prev) prev.layer.remove();
       next.layer.style.zIndex = '';
       if (this.cur !== next) return;
-      if (next.step === 0 && next.steps[0] && next.steps[0].auto) this.playStep();
-      else this.scheduleAuto();
+      if (first && !early) this.playStep();
+      else if (!this.running.length) this.scheduleAuto();
     }
 
     playStep() {
