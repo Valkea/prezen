@@ -206,25 +206,36 @@
         h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Apply to all'), onClick: () => E.commit('Transition on all slides', (d) => d.slides.forEach((x) => { x.transition = PZ.clone(tr); })) }),
         h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'transition', select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') }))))));
 
-    const animated = s.els.filter((e) => e.anim).sort((a, b) => (a.anim.order || 0) - (b.anim.order || 0));
-    if (animated.length) {
-      const listEl = h('div', { class: 'ed-anim-list' });
-      animated.forEach((el, n) => {
-        const f = PZ.getEffect(E.doc, el.anim.effect);
-        listEl.appendChild(h('div', { class: 'ed-anim-row' },
-          h('span', { class: 'ed-anim-n', text: String(n + 1) }),
-          h('button', { class: 'ed-anim-name', onClick: () => E.select([el.id]), title: t('Select') }, h('b', { text: elLabel(el) }), h('small', { text: (f ? PZ.fxName(f) : el.anim.effect) + ' · ' + { click: t('on click'), with: t('with previous'), after: t('after previous') }[el.anim.trigger] })),
-          ui.iconBtn('chevron-up', t('Earlier'), () => reorderAnim(animated, n, -1)),
-          ui.iconBtn('chevron-down', t('Later'), () => reorderAnim(animated, n, 1))));
-      });
-      pane.appendChild(ui.section('Animation order', listEl));
-    }
+    animOrderSection();
 
     pane.appendChild(ui.section('Playback', h('div', null,
       ui.row(t('Auto-advance'), ui.number(s.auto, set('Auto-advance', (v) => { s.auto = v; }), { min: 0, max: 3600, step: 1, unit: 's', title: t('0 = wait for a click') })),
       ui.row(t('Hidden'), ui.toggle(s.hidden, (v) => live('Hide slide', () => { s.hidden = v; }, false), t('Skip this slide when presenting'))))));
 
     pane.appendChild(ui.section('Speaker notes', ui.textarea(s.notes, set('Notes', (v) => { s.notes = v; }), { rows: 6, placeholder: t('Notes for you: shown in the presenter view (S) and in the notes PDF.') })));
+  }
+
+  /** "Animation order" section, shown in every panel as soon as the current slide has an animation.
+   *  Hovering a row plays that element's animation on the stage; rows of selected elements are highlighted. */
+  function animOrderSection() {
+    const s = E.slide();
+    const animated = s.els.filter((e) => e.anim).sort((a, b) => (a.anim.order || 0) - (b.anim.order || 0));
+    if (!animated.length) return;
+    const listEl = h('div', { class: 'ed-anim-list' });
+    let hoverTimer = 0;
+    const stopHover = () => { clearTimeout(hoverTimer); PZ.edStage.previewEffect([], null); };
+    animated.forEach((el, n) => {
+      const f = PZ.getEffect(E.doc, el.anim.effect);
+      const row = h('div', { class: 'ed-anim-row' + (E.sel.includes(el.id) ? ' ed-on' : '') },
+        h('span', { class: 'ed-anim-n', text: String(n + 1) }),
+        h('button', { class: 'ed-anim-name', onClick: () => { stopHover(); E.select([el.id]); }, title: t('Select') }, h('b', { text: elLabel(el) }), h('small', { text: (f ? PZ.fxName(f) : el.anim.effect) + ' · ' + { click: t('on click'), with: t('with previous'), after: t('after previous') }[el.anim.trigger] })),
+        ui.iconBtn('chevron-up', t('Earlier'), () => reorderAnim(animated, n, -1)),
+        ui.iconBtn('chevron-down', t('Later'), () => reorderAnim(animated, n, 1)));
+      row.addEventListener('mouseenter', () => { clearTimeout(hoverTimer); hoverTimer = setTimeout(() => PZ.edStage.previewAnim(el), 200); });
+      listEl.appendChild(row);
+    });
+    listEl.addEventListener('mouseleave', stopHover);
+    pane.appendChild(ui.section('Animation order', listEl));
   }
 
   function reorderAnim(animated, n, d) {
@@ -291,6 +302,7 @@
     if (el.type === 'icon') pane.appendChild(ui.section('Icon', iconControls(el)));
     pane.appendChild(ui.section('Position & size', positionControls(el)));
     pane.appendChild(ui.section('Animation', animControls(el)));
+    animOrderSection();
     pane.appendChild(ui.section('Effects & link', h('div', null,
       ui.row(t('Shadow'), ui.select(el.shadow, Object.entries(PZ.SHADOWS).filter(([k2]) => k2 !== 'text').map(([k2, v]) => ({ value: k2, label: t(v.name) })), set('Shadow', (v) => { el.shadow = v; }))),
       ui.row(t('Link'), ui.text(el.link, (v, done) => { if (done) live('Link', () => { el.link = PZ.safeLink(v.trim()); }, true); }, { placeholder: t('https://…  or  #3 (slide 3)') })),
@@ -462,6 +474,7 @@
         }, true);
       }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect(els.slice().sort((p, q) => p.y - q.y || p.x - q.x), v !== SHOW_FUN && v) })),
       h('p', { class: 'ed-hint', text: t('One click plays them one after the other, top to bottom.') }))));
+    animOrderSection();
     pane.appendChild(ui.section('Appearance', ui.row(t('Opacity'), ui.slider(Math.round(els[0].opacity * 100), set('Opacity', (v) => els.forEach((x) => { x.opacity = v / 100; })), { min: 0, max: 100, fmt: (v) => v + '%' }))));
   }
 })(window.PZ = window.PZ || {});
