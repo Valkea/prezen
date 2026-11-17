@@ -200,8 +200,9 @@
         { previewDelay: 250, onPreview: (v) => (v && v !== SHOW_FUN ? previewTransition(Object.assign({ effect: v }, transitionDefaults(v))) : stopTransition()) })),
       fx && fx.id !== 'none' ? ui.row(t('Duration'), ui.slider(tr.duration, set('Transition', (v) => { tr.duration = v; }), { min: 100, max: 3000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })) : null,
       fx && fx.id !== 'none' ? ui.row(t('Easing'), ui.select(tr.easing, easingOptions(true), set('Transition', (v) => { tr.easing = v; }))) : null,
+      fx && fx.id !== 'none' ? null : h('p', { class: 'ed-hint', text: t('Choose an effect to set its duration and easing, or design one in the Studio.') }),
       h('div', { class: 'ui-btn-row' },
-        h('button', { class: 'ui-btn ui-small', onClick: () => previewTransition(tr) }, PZ.icon('play'), h('span', { text: t('Preview') })),
+        h('button', { class: 'ui-btn ui-small', disabled: !(fx && fx.id !== 'none'), onClick: () => previewTransition(tr) }, PZ.icon('play'), h('span', { text: t('Preview') })),
         h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Apply to all'), onClick: () => E.commit('Transition on all slides', (d) => d.slides.forEach((x) => { x.transition = PZ.clone(tr); })) }),
         h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'transition', select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') }))))));
 
@@ -436,10 +437,11 @@
       box.appendChild(ui.row(t('Duration'), ui.slider(a.duration, set('Animation duration', (v) => { a.duration = v; }), { min: 100, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       box.appendChild(ui.row(t('Delay'), ui.slider(a.delay, set('Animation delay', (v) => { a.delay = v; }), { min: 0, max: 5000, step: 50, fmt: (v) => (v / 1000).toFixed(2) + ' s' })));
       box.appendChild(ui.row(t('Easing'), ui.select(a.easing, easingOptions(true), set('Animation easing', (v) => { a.easing = v; }))));
-      box.appendChild(h('div', { class: 'ui-btn-row' },
-        h('button', { class: 'ui-btn ui-small', onClick: () => PZ.edStage.previewAnim(el) }, PZ.icon('play'), h('span', { text: t('Preview') })),
-        h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'element', select: a.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Custom…') }))));
-    }
+    } else box.appendChild(h('p', { class: 'ed-hint', text: t('Choose an effect to set when and how it plays, or design one in the Studio.') }));
+    // same buttons as the slide transition, whether or not the element is animated yet
+    box.appendChild(h('div', { class: 'ui-btn-row' },
+      h('button', { class: 'ui-btn ui-small', disabled: !a, onClick: () => PZ.edStage.previewAnim(el) }, PZ.icon('play'), h('span', { text: t('Preview') })),
+      h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'element', select: a ? a.effect : '' }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') }))));
     return box;
   }
 
