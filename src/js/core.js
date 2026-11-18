@@ -5,6 +5,9 @@
 
   PZ.VERSION = '0.1.3';
   PZ.APP = 'PrezEn';
+  // The logo: a lotus on still water, paper, ink and a vermilion seal (Prez + Zen). Header, favicon and exported files.
+  PZ.LOGO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x=".5" y=".5" width="31" height="31" rx="7.5" fill="#efe8dc" stroke="#d9cfbd"/><g transform="translate(0 -1.5)"><path fill="#1f2a2e" d="M16 21.5c-4.6-1.2-8.6-4.2-9.5-9 4.6.2 8.1 3.3 9.5 9zM16 21.5c4.6-1.2 8.6-4.2 9.5-9-4.6.2-8.1 3.3-9.5 9z"/><path fill="#c8553d" d="M16 21.5c-2.6-2.8-3.6-6.6 0-13 3.6 6.4 2.6 10.2 0 13z"/><path d="M7 25.5h18" stroke="#1f2a2e" stroke-width="2" stroke-linecap="round"/></g></svg>';
+  PZ.LOGO_URL = 'data:image/svg+xml,' + encodeURIComponent(PZ.LOGO_SVG);
   // Where the hosted app lives. Share links point here when the app runs from a local file.
   PZ.PUBLIC_URL = 'https://valkea.github.io/prezen/';
 

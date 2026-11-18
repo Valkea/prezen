@@ -429,7 +429,7 @@
     undoBtn = tb('undo', '', () => E.undo(), { title: t('Undo ({key})', { key: MOD + 'Z' }) });
     redoBtn = tb('redo', '', () => E.redo(), { title: t('Redo ({key})', { key: MOD + 'Shift+Z' }) });
     const top = h('header', { class: 'ed-top' },
-      h('button', { class: 'ed-brand', title: t('Menu'), onClick: (e) => fileMenu(e.currentTarget) }, h('span', { class: 'ed-logo' }, 'P'), h('span', { class: 'ed-brand-name', text: 'PrezEn' }), PZ.icon('chevron-down')),
+      h('button', { class: 'ed-brand', title: t('Menu'), onClick: (e) => fileMenu(e.currentTarget) }, h('span', { class: 'ed-logo', 'aria-hidden': 'true', html: PZ.LOGO_SVG }), h('span', { class: 'ed-brand-name', text: 'PrezEn' }), PZ.icon('chevron-down')),
       titleInput,
       h('div', { class: 'ed-tb-group' }, undoBtn, redoBtn),
       h('div', { class: 'ed-tb-group' },
