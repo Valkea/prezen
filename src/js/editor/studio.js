@@ -11,13 +11,13 @@
     const cur = E.slide();
     const prev = E.doc.slides[E.cur - 1];
     if (prev) return [prev, cur];
-    const a = { bg: { type: 'gradient', color: '#1d2433', color2: '#3b3f8f', angle: 135 }, els: [PZ.make.text(d, { x: d.w * 0.1, y: d.h * 0.4, w: d.w * 0.8, h: d.h * 0.2, html: t('Slide A'), style: { size: d.h * 0.12, bold: true, color: '#ffffff', align: 'center' } })] };
+    const a = { bg: { type: 'gradient', color: '#1f2a2e', color2: '#4a3a33', angle: 135 }, els: [PZ.make.text(d, { x: d.w * 0.1, y: d.h * 0.4, w: d.w * 0.8, h: d.h * 0.2, html: t('Slide A'), style: { size: d.h * 0.12, bold: true, color: '#ffffff', align: 'center' } })] };
     return [PZ.normalizeSlide(a, d.theme), cur];
   }
 
   function sampleElementSlide() {
     const d = E.doc;
-    return PZ.normalizeSlide({ bg: { type: 'color', color: '#f5f6fa' }, els: [
+    return PZ.normalizeSlide({ bg: { type: 'color', color: '#f4f0e8' }, els: [
       PZ.make.shape(d, { id: 'pz-demo', x: d.w * 0.32, y: d.h * 0.3, w: d.w * 0.36, h: d.h * 0.4, radius: 40, html: t('Animated'), style: { size: d.h * 0.07, bold: true } }),
     ] }, d.theme);
   }

@@ -415,7 +415,7 @@
   function shapesMenu(anchor) {
     const grid = h('div', { class: 'ed-shape-grid' });
     for (const [kind, def] of Object.entries(PZ.SHAPES)) {
-      const prev = PZ.shapeSvg({ id: 'p' + kind, shape: kind, w: 44, h: def.line ? 20 : 34, fill: '#7c8cff', stroke: def.line ? '#7c8cff' : '', sw: def.line ? 3 : 0, radius: 6 });
+      const prev = PZ.shapeSvg({ id: 'p' + kind, shape: kind, w: 44, h: def.line ? 20 : 34, fill: '#5c6b68', stroke: def.line ? '#5c6b68' : '', sw: def.line ? 3 : 0, radius: 6 });
       grid.appendChild(h('button', { class: 'ed-shape-btn', title: t(def.name), onClick: () => { pop.close(); E.insertShape(kind); } }, prev));
     }
     const pop = ui.popover(anchor, h('div', { class: 'ed-pop-pad' }, h('div', { class: 'ui-menu-head', text: t('Shapes') }), grid));

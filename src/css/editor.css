@@ -1,20 +1,21 @@
 /* PrezEn · editor.css: the editor UI (not shipped in slideshow exports). */
 :root {
-  --bg: #f3f4f8; --panel: #ffffff; --panel-2: #f8f9fb; --line: #e2e5ec; --line-2: #d3d7e1; --text: #1d2433; --muted: #687085;
-  --accent: #5b5bf0; --accent-2: #4a4ae0; --accent-weak: #ecebff; --accent-text: #ffffff; --hover: #eef0f5; --canvas: #e6e8ef;
-  --danger: #e5484d; --warn: #b7791f; --shadow: 0 12px 34px rgba(20, 24, 40, 0.14); --radius: 10px; --sel: #5b5bf0;
+  --bg: #f4f0e8; --panel: #fcfaf6; --panel-2: #f7f3ec; --line: #e6dfd2; --line-2: #d8cfbf; --text: #1f2a2e; --muted: #6f6a60;
+  --accent: #1f2a2e; --accent-2: #33423f; --accent-weak: #e9e3d6; --accent-text: #fcfaf6; --hover: #efe9de; --canvas: #e9e3d7;
+  --danger: #d23c3c; --warn: #b7791f; --shadow: 0 12px 34px rgba(31, 42, 46, 0.14); --radius: 10px; --sel: #c4532f;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1117; --panel: #171a22; --panel-2: #1c2029; --line: #2a2f3c; --line-2: #363c4b; --text: #e6e8ef; --muted: #959cae;
-    --accent: #8486ff; --accent-2: #9698ff; --accent-weak: #262850; --accent-text: #0f1117; --hover: #222633; --canvas: #0b0d12;
-    --danger: #ff6b70; --warn: #f0b44c; --shadow: 0 12px 34px rgba(0, 0, 0, 0.5); --sel: #8486ff;
+    --bg: #121514; --panel: #1a1e1d; --panel-2: #202523; --line: #2c3230; --line-2: #39403d; --text: #ece6da; --muted: #a19a8d;
+    --accent: #ece6da; --accent-2: #fffaf0; --accent-weak: #2d3331; --accent-text: #121514; --hover: #252b29; --canvas: #0d0f0e;
+    --danger: #ff6b70; --warn: #f0b44c; --shadow: 0 12px 34px rgba(0, 0, 0, 0.5); --sel: #e0703f;
     color-scheme: dark;
   }
 }
 body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; overflow: hidden; }
-.pz-editor-body button { font: inherit; color: inherit; }
+.pz-editor-body button { font: inherit; }
+:where(.pz-editor-body button) { color: inherit; } /* no specificity: filled buttons (.ed-present, .ui-primary…) keep their own text colour */
 .pz-editor-body :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .ed { position: fixed; inset: 0; display: grid; grid-template-rows: 54px minmax(0, 1fr) 30px; }
@@ -37,7 +38,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-tb .pz-ico { width: 18px; height: 18px; }
 .ed-present, .ed-present-more { all: unset; display: inline-flex; align-items: center; gap: 6px; height: 34px; background: var(--accent); color: var(--accent-text); cursor: pointer; font-weight: 600; }
 .ed-present { padding: 0 14px; border-radius: 8px 0 0 8px; margin-left: 6px; }
-.ed-present-more { padding: 0 7px; border-radius: 0 8px 8px 0; border-left: 1px solid rgba(255, 255, 255, 0.25); }
+.ed-present-more { padding: 0 7px; border-radius: 0 8px 8px 0; border-left: 1px solid color-mix(in srgb, var(--accent-text) 25%, transparent); }
 .ed-present:hover, .ed-present-more:hover { background: var(--accent-2); }
 .ed-present .pz-ico, .ed-present-more .pz-ico { width: 16px; height: 16px; }
 
@@ -64,7 +65,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-thumb-more .pz-ico { width: 16px; height: 16px; }
 /* gap above a thumbnail: marker for the transition into that slide (name revealed on hover) */
 .ed-trans-gap { position: absolute; left: 28px; right: 0; top: -14px; height: 18px; display: flex; align-items: center; justify-content: center; z-index: 2; cursor: default; }
-.ed-trans-btn { all: unset; display: inline-flex; align-items: center; max-width: calc(100% - 16px); height: 18px; padding: 0 3px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; box-shadow: 0 0 0 2px var(--panel); transition: padding 0.12s, opacity 0.12s; }
+.ed-trans-btn { all: unset; display: inline-flex; align-items: center; max-width: calc(100% - 16px); height: 18px; padding: 0 3px; border-radius: 9px; background: var(--accent); color: var(--accent-text); font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; box-shadow: 0 0 0 2px var(--panel); transition: padding 0.12s, opacity 0.12s; }
 .ed-trans-name { max-width: 0; overflow: hidden; text-overflow: ellipsis; transition: max-width 0.15s, margin 0.15s; }
 .ed-trans-btn .pz-ico { width: 12px; height: 12px; flex: none; }
 .ed-trans-btn.ed-trans-none { background: var(--panel); color: var(--muted); box-shadow: 0 0 0 1px var(--line-2); opacity: 0; }
@@ -76,7 +77,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 
 .ed-canvas { position: relative; overflow: auto; background: var(--canvas); display: grid; place-items: center; padding: 32px; min-width: 0; }
 .ed-canvas.ed-drop { box-shadow: inset 0 0 0 3px var(--accent); }
-.ed-stage { position: relative; box-shadow: 0 6px 30px rgba(20, 24, 40, 0.18), 0 0 0 1px rgba(20, 24, 40, 0.06); flex: none; }
+.ed-stage { position: relative; box-shadow: 0 6px 30px rgba(31, 42, 46, 0.18), 0 0 0 1px rgba(31, 42, 46, 0.06); flex: none; }
 .ed-slide-host { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .ed-slide-host .pz-el { cursor: move; }
 .ed-slide-host .pz-el:hover { outline: calc(1.5px / var(--k, 1)) solid color-mix(in srgb, var(--sel) 60%, transparent); }
@@ -103,7 +104,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-crop-ghost img { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; }
 .ed-crop-pic::after { content: ''; position: absolute; inset: 0; outline: 1px dashed rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); pointer-events: none; }
 .ed-crop-box { position: absolute; pointer-events: auto; cursor: move; box-shadow: 0 0 0 1.5px var(--sel); }
-.ed-h.ed-ch { background: #1d2433; border-color: #fff; }
+.ed-h.ed-ch { background: #1f2a2e; border-color: #fff; }
 .ed-h.ed-zh { width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; z-index: 1; }
 .ed-crop-bar { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; max-width: calc(100% - 20px);
   padding: 6px 6px 6px 12px; border-radius: 10px; background: var(--panel); color: var(--text); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25); font-size: 12.5px; pointer-events: auto; z-index: 2; }
@@ -200,7 +201,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ui-toggle-track { position: relative; width: 32px; height: 18px; border-radius: 99px; background: var(--line-2); transition: background 0.15s; flex: none; }
 .ui-toggle-track::after { content: ''; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 0.15s; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
 .ui-toggle input:checked + .ui-toggle-track { background: var(--accent); }
-.ui-toggle input:checked + .ui-toggle-track::after { transform: translateX(14px); }
+.ui-toggle input:checked + .ui-toggle-track::after { transform: translateX(14px); background: var(--accent-text); }
 .ui-toggle input:focus-visible + .ui-toggle-track { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ui-toggle-label { font-size: 12.5px; }
 .ui-seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--hover); gap: 2px; flex-wrap: wrap; }
@@ -253,7 +254,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ui-menu-sep { height: 1px; background: var(--line); margin: 4px 6px; }
 .ui-menu-head { padding: 6px 10px 6px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 
-.ui-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgba(10, 12, 20, 0.45); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; overflow: auto; animation: ui-fade 0.15s ease-out; }
+.ui-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgba(18, 21, 20, 0.45); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; overflow: auto; animation: ui-fade 0.15s ease-out; }
 @keyframes ui-fade { from { opacity: 0; } }
 .ui-modal { width: 460px; max-width: 100%; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; max-height: 88vh; }
 .ui-modal.ui-wide { width: 760px; }
