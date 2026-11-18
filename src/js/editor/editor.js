@@ -354,6 +354,31 @@
     if (!quiet) PZ.toast(on ? t('Fun effects on: explosions, turtles, confetti… are now in the transition and animation lists.') : t('Fun effects hidden from the lists. Slides that use them still play them.'), { timeout: 4500 });
   };
 
+  /** Interface theme: 'dark' (default), 'light' or 'auto' (follows the system). Remembered in this browser. */
+  const THEMES = { auto: ['Auto (system)', 'monitor'], light: ['Light', 'sun'], dark: ['Dark', 'moon'] };
+  let themeMem = null;
+  E.theme = function () {
+    if (themeMem) return themeMem;
+    let v = null;
+    try { v = localStorage.getItem('prezen:theme'); } catch (e) { /* ignore */ }
+    return THEMES[v] ? v : 'dark';
+  };
+  E.setTheme = function (v) {
+    if (!THEMES[v]) v = 'dark';
+    themeMem = v;
+    try { localStorage.setItem('prezen:theme', v); themeMem = null; } catch (e) { /* private mode: this session only */ }
+    applyTheme();
+    renderStatus();
+  };
+  function applyTheme() {
+    const v = E.theme();
+    if (v === 'auto') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = v;
+  }
+  function themeMenu(anchor, o) {
+    ui.menu(anchor, Object.keys(THEMES).map((k) => ({ label: t(THEMES[k][0]), icon: k === E.theme() ? 'check' : THEMES[k][1], run: () => E.setTheme(k) })), o);
+  }
+
   function langMenu(anchor, o) {
     ui.menu(anchor, Object.keys(PZ.LANGS).map((l) => ({ label: PZ.LANGS[l], icon: l === PZ.lang ? 'check' : null, run: () => E.setLang(l) })), o);
   }
@@ -381,6 +406,7 @@
       h('span', { class: 'ed-grow' }),
       E.fileName ? h('span', { class: 'ed-st-file', title: t('{key} writes to this file', { key: MOD + 'S' }), text: E.fileName }) : null,
       h('span', { class: 'ed-st-save' + (E.dirty && E.mode === 'file' ? ' ed-warn' : ''), text: E.saveState }),
+      h('button', { class: 'ed-st-theme', title: t('Theme: {name}', { name: t(THEMES[E.theme()][0]) }), 'aria-label': t('Theme: {name}', { name: t(THEMES[E.theme()][0]) }), onClick: (e) => themeMenu(e.currentTarget, { align: 'right' }) }, PZ.icon(THEMES[E.theme()][1])),
       h('button', { class: 'ed-st-lang', title: t('Language'), text: PZ.lang.toUpperCase(), onClick: (e) => langMenu(e.currentTarget, { align: 'right' }) }),
       PZ.edStage.zoomControl(),
     ].filter(Boolean));
@@ -406,6 +432,7 @@
       '-',
       { label: t('Page size & theme…'), icon: 'sliders', run: () => PZ.edDialogs.pageSetup() },
       { label: E.funOn() ? t('Fun effects: on') : t('Fun effects: off'), icon: 'sparkles', run: () => E.setFun(!E.funOn()) },
+      { label: t('Theme: {name}', { name: t(THEMES[E.theme()][0]) }), icon: THEMES[E.theme()][1], run: () => themeMenu(anchor) },
       { label: t('Language: {name}', { name: PZ.LANGS[PZ.lang] }), icon: 'globe', run: () => langMenu(anchor) },
       { label: t('Keyboard shortcuts'), icon: 'keyboard', kbd: '?', run: () => PZ.edDialogs.shortcuts() },
       { label: t('About PrezEn & privacy'), icon: 'info', run: () => PZ.edDialogs.about() },
@@ -422,6 +449,7 @@
   }
 
   function build(root) {
+    applyTheme();
     const tb = (icon, label, run, o) => h('button', { class: 'ed-tb' + (o && o.cls ? ' ' + o.cls : ''), title: (o && o.title) || label, onClick: (e) => run(e.currentTarget) }, PZ.icon(icon), label ? h('span', { class: 'ed-tb-label', text: label }) : null);
     document.documentElement.style.setProperty('--pz-ph-text', JSON.stringify(t('Type your text'))); // empty text box placeholder (CSS)
     titleInput = h('input', { class: 'ed-title', value: E.doc.title, 'aria-label': t('Presentation title'), spellcheck: 'false',

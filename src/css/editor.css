@@ -5,13 +5,20 @@
   --danger: #d23c3c; --warn: #b7791f; --shadow: 0 12px 34px rgba(31, 42, 46, 0.14); --radius: 10px; --sel: #c4532f;
   color-scheme: light;
 }
+/* Dark: follows the system unless the user picked a theme (data-theme on <html>, set by the editor). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #121514; --panel: #1a1e1d; --panel-2: #202523; --line: #2c3230; --line-2: #39403d; --text: #ece6da; --muted: #a19a8d;
     --accent: #ece6da; --accent-2: #fffaf0; --accent-weak: #2d3331; --accent-text: #121514; --hover: #252b29; --canvas: #0d0f0e;
     --danger: #ff6b70; --warn: #f0b44c; --shadow: 0 12px 34px rgba(0, 0, 0, 0.5); --sel: #e0703f;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #121514; --panel: #1a1e1d; --panel-2: #202523; --line: #2c3230; --line-2: #39403d; --text: #ece6da; --muted: #a19a8d;
+  --accent: #ece6da; --accent-2: #fffaf0; --accent-weak: #2d3331; --accent-text: #121514; --hover: #252b29; --canvas: #0d0f0e;
+  --danger: #ff6b70; --warn: #f0b44c; --shadow: 0 12px 34px rgba(0, 0, 0, 0.5); --sel: #e0703f;
+  color-scheme: dark;
 }
 body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; overflow: hidden; }
 .pz-editor-body button { font: inherit; }
@@ -127,6 +134,9 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-zoom-btn:hover, .ed-zoom-pct:hover { background: var(--hover); color: var(--text); }
 .ed-st-lang { all: unset; cursor: pointer; padding: 1px 7px; border-radius: 5px; font-weight: 700; letter-spacing: 0.04em; }
 .ed-st-lang:hover, .ed-st-lang:focus-visible { background: var(--hover); color: var(--text); }
+.ed-st-theme { all: unset; cursor: pointer; display: inline-flex; padding: 2px 4px; border-radius: 5px; }
+.ed-st-theme:hover, .ed-st-theme:focus-visible { background: var(--hover); color: var(--text); }
+.ed-st-theme .pz-ico { width: 14px; height: 14px; }
 
 /* ---------------------------------------------------------------- inspector */
 .ed-inspector { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-height: 0; }
