@@ -423,6 +423,8 @@
     'Raw data, to keep in version control or reopen later.': 'Données brutes, à versionner ou à rouvrir plus tard.',
     'Embed linked images (Drive, S3, URLs…) so the file works offline': 'Intégrer les images liées (Drive, S3, URL…) pour que le fichier fonctionne hors ligne',
     'Embed Google Fonts (bigger file, perfect offline typography)': 'Intégrer les Google Fonts (fichier plus lourd, typographie parfaite hors ligne)',
+    'Editable file: include the PDF reader (pdf.js, +1.4 MB) so PDF import works offline': 'Fichier modifiable : inclure le lecteur PDF (pdf.js, +1,4 Mo) pour importer des PDF hors ligne',
+    'Downloading the PDF reader…': 'Téléchargement du lecteur PDF…',
     'Exported files open in the current language ({lang}).': 'Les fichiers exportés s’ouvrent dans la langue actuelle ({lang}).',
 
     // ---------------------------------------------------------------- library, new, page setup

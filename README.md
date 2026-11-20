@@ -103,7 +103,8 @@ PDF import uses [pdf.js](https://mozilla.github.io/pdf.js/) (Mozilla, Apache-2.0
 jsDelivr the first time a PDF is imported, and the browser checks it against the SHA-384 hashes in
 `src/js/editor/pdf.js` (Subresource Integrity). `build:pdfjs` (or `node build.mjs --pdfjs`) downloads the same files once
 into `vendor/`, checks the same hashes, and inlines them as inert `<script type="text/plain">` nodes that run only when
-a PDF is imported; editable files exported from that build carry them too. To update pdf.js, change the version and
+a PDF is imported. In the app, **Export → Editable file: include the PDF reader** does the same for one exported file
+(on by default when the app already carries pdf.js; slideshow files never do). To update pdf.js, change the version and
 hashes in `src/js/editor/pdf.js` (it must be a 3.x build: the last with classic, non-module scripts).
 
 Every push to `main` runs the tests, builds, and deploys `dist/` to GitHub Pages
@@ -172,8 +173,8 @@ forward when going back instead of being rewound.
 
 Only these requests leave the device: pictures you link to, Google Fonts when a slide uses one (system
 fonts never load anything; fonts can be embedded on export), the online icon search (Iconify) when you
-use it, and pdf.js from jsDelivr when you import a PDF (not with `build:pdfjs`; the PDF itself never leaves the
-browser). Nothing else: no analytics, no cookies.
+use it, and pdf.js from jsDelivr when you import a PDF (not when the app carries it: `build:pdfjs`, or an editable file
+exported with the PDF reader; the PDF itself never leaves the browser). Nothing else: no analytics, no cookies.
 
 ## Roadmap ideas
 

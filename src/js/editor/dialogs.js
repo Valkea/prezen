@@ -210,7 +210,7 @@
 
   // ---------------------------------------------------------------- export
   D.exportDlg = function () {
-    const opts = { embedImages: true, embedFonts: false };
+    const opts = { embedImages: true, embedFonts: false, pdfjs: PZ.edPdf.bundled() };
     const status = h('div', { class: 'dlg-status' });
     const run = (fn) => async () => {
       if (E.editing) PZ.edStage.endEdit();
@@ -218,7 +218,8 @@
       try { await fn(); } catch (e) { status.textContent = ''; PZ.toast(e.message, { type: 'error', timeout: 9000 }); }
     };
     const html = (mode) => run(async () => {
-      const r = await PZ.buildHtml(E.doc, Object.assign({ mode, onProgress: (i, n) => { status.textContent = t('Embedding images {i}/{n}…', { i, n }); } }, opts));
+      const r = await PZ.buildHtml(E.doc, Object.assign({ mode, onProgress: (i, n) => { status.textContent = t('Embedding images {i}/{n}…', { i, n }); },
+        onPdfjs: () => { status.textContent = t('Downloading the PDF reader…'); } }, opts));
       const name = PZ.safeFileName(E.doc.title + (mode === 'player' ? ' ' + t('(slideshow)') : ''), '.html');
       const handle = await PZ.files.saveAs(new Blob([r.html], { type: 'text/html' }), name, 'html');
       status.textContent = handle === 'cancel' ? '' : t('Done: {size}.', { size: PZ.fmtBytes(r.size) });
@@ -238,7 +239,8 @@
         card('download', t('Data (JSON)'), t('Raw data, to keep in version control or reopen later.'), run(async () => { await E.saveAs('json'); status.textContent = ''; })),
         h('div', { class: 'dlg-opts' },
           ui.toggle(opts.embedImages, (v) => { opts.embedImages = v; }, t('Embed linked images (Drive, S3, URLs…) so the file works offline')),
-          ui.toggle(opts.embedFonts, (v) => { opts.embedFonts = v; }, t('Embed Google Fonts (bigger file, perfect offline typography)'))),
+          ui.toggle(opts.embedFonts, (v) => { opts.embedFonts = v; }, t('Embed Google Fonts (bigger file, perfect offline typography)')),
+          ui.toggle(opts.pdfjs, (v) => { opts.pdfjs = v; }, t('Editable file: include the PDF reader (pdf.js, +1.4 MB) so PDF import works offline'))),
         passwordField(),
         h('p', { class: 'ed-hint', text: t('Exported files open in the current language ({lang}).', { lang: PZ.LANGS[PZ.lang] }) }),
         status,

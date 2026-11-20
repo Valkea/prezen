@@ -2,10 +2,10 @@
  *   editable: text boxes, images, and the rest of the page (shapes, backgrounds) as the slide's background picture
  *   pictures: each page as one picture behind its slide (slide background, "Fit"): exact, but not editable
  *
- * Rendering uses pdf.js (Mozilla, Apache-2.0). `npm run build -- --pdfjs` bundles it into the app as inert
- * <script type="text/plain" data-pz="pdfjs-lib|pdfjs-worker"> nodes: import then works offline, and editable files
- * exported from that build carry it too. Otherwise it is fetched from jsDelivr the first time a PDF is imported,
- * and the browser checks the files against the hashes below (Subresource Integrity). */
+ * Rendering uses pdf.js (Mozilla, Apache-2.0). `npm run build:pdfjs`, or the "Include the PDF reader" export option for
+ * an editable file, puts it into the app as inert <script type="text/plain" data-pz="pdfjs-lib|pdfjs-worker"> nodes:
+ * import then works offline. Otherwise it is fetched from jsDelivr the first time a PDF is imported, and the browser
+ * checks the files against the hashes below (Subresource Integrity). */
 (function (PZ) {
   'use strict';
   const h = PZ.h, E = PZ.ed, ui = PZ.ui, t = PZ.t, tn = PZ.tn;
@@ -28,6 +28,17 @@
     if (!res || !res.ok) throw new Error(t('Could not download the PDF reader (pdf.js, from cdn.jsdelivr.net). Check the connection and try again.'));
     return res.text();
   }
+
+  /** pdf.js as app sources (see PZ.appSources), for an editable file that imports PDFs offline: taken from this
+   *  page when it carries it, else downloaded (onDownload() is called first). */
+  P.sources = async function (onDownload) {
+    if (!P.bundled() && onDownload) onDownload();
+    const texts = await Promise.all([source('lib'), source('worker')]);
+    // inside a <script> node, "<" + "!--" would change how the HTML parser finds its end (the hashed files have none)
+    const unsafe = new RegExp('<' + '/script|<' + '!--', 'i'); // spelled in pieces: this file is inlined in a <script> too
+    if (texts.some((x) => unsafe.test(x))) throw new Error(t('The PDF reader did not start.'));
+    return texts.map((text, i) => ({ kind: 'js', name: 'pdfjs-' + ['lib', 'worker'][i], player: false, type: 'text/plain', text }));
+  };
 
   function runScript(text) {
     const s = document.createElement('script');

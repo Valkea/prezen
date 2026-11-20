@@ -51,7 +51,7 @@
     return tags;
   }
 
-  /** Build the HTML text. opts: {mode:'player'|'editor', embedImages, embedFonts, onProgress}. Returns {html, report}. */
+  /** Build the HTML text. opts: {mode:'player'|'editor', embedImages, embedFonts, pdfjs, onProgress, onPdfjs}. Returns {html, report}. */
   PZ.buildHtml = async function (doc, opts) {
     opts = opts || {};
     const mode = opts.mode === 'editor' ? 'editor' : 'player';
@@ -63,7 +63,13 @@
       report.failedImages = r.failed;
     }
     PZ.gcAssets(d);
-    const sources = await PZ.appSources(mode === 'player');
+    let sources = await PZ.appSources(mode === 'player');
+    // pdf.js (PDF import) in an editable file: opts.pdfjs true puts it in (from this page, or downloaded), false leaves
+    // it out (the file then fetches it from jsDelivr when a PDF is imported), unset keeps what this page has
+    if (mode === 'editor' && opts.pdfjs != null && PZ.edPdf) {
+      sources = sources.filter((s) => !/^pdfjs-/.test(s.name));
+      if (opts.pdfjs) sources = sources.concat(await PZ.edPdf.sources(opts.onPdfjs));
+    }
     const fonts = await fontTags(d, !!opts.embedFonts);
     // a password-protected doc travels encrypted ("enc": an encrypted pack, see codec.js), title included
     const locked = !!d.password;
