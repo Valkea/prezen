@@ -60,9 +60,12 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-thumb-item:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 .ed-thumb-num { width: 18px; text-align: right; color: var(--muted); font-size: 11px; font-weight: 600; padding-top: 2px; flex: none; }
 .ed-thumb-prev { border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px var(--line-2); flex: none; }
-.ed-thumb-item.ed-on .ed-thumb-prev { box-shadow: 0 0 0 2.5px var(--accent); }
-.ed-thumb-item.ed-on .ed-thumb-num { color: var(--accent); }
-.ed-thumb-item.ed-hidden .ed-thumb-prev { opacity: 0.4; }
+/* current slide: tinted row + thick ring in the selection colour, which stands out from the neutral UI and from any slide */
+/* (a gap in the row colour keeps the ring apart from slides whose edges are close to it; gap + ring = the row padding) */
+.ed-thumb-item.ed-on { --row: color-mix(in srgb, var(--sel) 16%, var(--panel)); background: var(--row); }
+.ed-thumb-item.ed-on .ed-thumb-prev { box-shadow: 0 0 0 1.5px var(--row), 0 0 0 4px var(--sel); }
+.ed-thumb-item.ed-on .ed-thumb-num { color: var(--sel); font-weight: 800; }
+.ed-thumb-item.ed-hidden .ed-thumb-prev > * { opacity: 0.4; } /* fade the slide, not the ring */
 .ed-thumb-item.ed-dragging { opacity: 0.4; }
 .ed-thumb-item.ed-drop-before::before, .ed-thumb-item.ed-drop-after::after { content: ''; position: absolute; left: 28px; right: 0; height: 3px; border-radius: 3px; background: var(--accent); }
 .ed-thumb-item.ed-drop-before::before { top: -7px; }
