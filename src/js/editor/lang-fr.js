@@ -73,7 +73,7 @@
     'Zoom out (Ctrl+wheel)': 'Zoom arrière (Ctrl+molette)',
     'Zoom in (Ctrl+wheel)': 'Zoom avant (Ctrl+molette)',
     'Select tool': 'Outil de sélection',
-    'Hand tool: drag to move around the slide (or hold Space)': 'Outil main : glissez pour vous déplacer dans la diapo (ou maintenez Espace)',
+    'Hand tool: drag to move around the slide, double-click to go back to selecting (or hold Space)': 'Outil main : glissez pour vous déplacer dans la diapo, double-cliquez pour revenir à la sélection (ou maintenez Espace)',
     'This browser cannot remember the language here: save the file ({key}) to keep it.': 'Ce navigateur ne peut pas mémoriser la langue ici : enregistrez le fichier ({key}) pour la conserver.',
 
     // ---------------------------------------------------------------- saving, files

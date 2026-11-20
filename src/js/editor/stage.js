@@ -18,6 +18,7 @@
     stage.addEventListener('dblclick', onDbl);
     stage.addEventListener('contextmenu', onContext);
     canvas.addEventListener('pointerdown', onPanDown, true); // before anything else sees the click
+    canvas.addEventListener('dblclick', () => { if (panTool) S.setPanTool(false); }); // double-click leaves the hand tool
     canvas.addEventListener('pointerdown', (e) => { if (e.target === canvas && e.button === 0) { if (E.editing) S.endEdit(); E.select([]); } });
     canvas.addEventListener('wheel', (e) => {
       if (!(e.ctrlKey || e.metaKey)) return;
@@ -106,7 +107,7 @@
     const tool = (on, icon, title, pan) => h('button', { class: 'ed-zoom-btn ed-tool' + (on ? ' ed-on' : ''), title, 'aria-label': title, 'aria-pressed': String(on), onClick: () => S.setPanTool(pan) }, PZ.icon(icon));
     const tools = h('span', { class: 'ed-tools' },
       tool(!panTool, 'pointer', t('Select tool'), false),
-      tool(panTool, 'hand', t('Hand tool: drag to move around the slide (or hold Space)'), true));
+      tool(panTool, 'hand', t('Hand tool: drag to move around the slide, double-click to go back to selecting (or hold Space)'), true));
     const pct = h('button', { class: 'ed-zoom-pct', title: t('Fit to window'), text: (E.zoom === 'fit' ? t('Fit') + ' · ' : '') + Math.round(k * 100) + '%', onClick: () => S.setZoom('fit') });
     return h('span', { class: 'ed-zoom' }, tools,
       h('button', { class: 'ed-zoom-btn', title: t('Zoom out (Ctrl+wheel)'), text: '−', onClick: () => S.setZoom(PZ.clamp(k / 1.25, 0.1, 4)) }), pct,
