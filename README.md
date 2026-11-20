@@ -23,6 +23,8 @@
   9 transitions (big explosion, turtle parade, confetti, hearts, rainbow, bubbles, warp speed, rocket, paint splash)
   and 10 element effects (confetti pop, boing, jelly, tada, heartbeat, turtle escort, explode, poof, blast off…).
   The switch only shows them in the lists (remembered per browser): decks that use them always play them.
+- 🔤 **Text styles.** Title, Subtitle, Heading 1–3, Body, Caption and Quote are set once per presentation
+  (slide panel or **Menu → Text styles…**) and picked per text box: change a style and every text using it follows, on every slide.
 - 🖨️ **PDF export** through the browser's print engine: vector text, one page per slide, or an A4 handout
   with speaker notes.
 
@@ -37,6 +39,7 @@
 | Edit from a flashdrive | **Export → Editable presentation (HTML)**, or **Ctrl+S**. Open it from the drive, edit, **Ctrl+S** again. In Chrome/Edge the file is overwritten in place (pick the same file once); other browsers download an updated copy. |
 | Print / PDF | **Ctrl+P** or **Export → PDF**, then *Save as PDF* in the print dialog. |
 | Keep the raw data | **Export → Data (JSON)**. The app opens `.json` and exported `.html` files (menu, or drop them on the canvas). |
+| Same title / heading settings everywhere | Pick a **Text style** at the top of a text box's *Text* section (or several boxes at once), or add a box already styled from the arrow next to **Text** in the toolbar. The styles belong to the whole presentation: edit them with **Edit text styles…** in the slide panel (nothing selected) or **Menu → Text styles…**: font, size, colour, bold / italic / underline, line height, spacing, text shadow. Every text using a style follows, on every slide. Changing one of these settings on a single text makes it **Custom** (a note says so). Alignment, box and padding stay per text. New slides from layouts use the styles. |
 | Switch language (English / Français) | Click **EN/FR** in the status bar (or **Menu → Language**), or the **EN/FR** button of a slideshow. The choice is remembered in this browser and saved inside exported files, so a file opened on another computer keeps its language. |
 
 ### Pictures
@@ -112,6 +115,8 @@ editable file can export and save new files with no network.
 {
   "v": 1, "id": "…", "title": "…", "w": 1920, "h": 1080,
   "theme": { "font": "Inter", "color": "#1d2433", "accent": "#5b5bf0", "accent2": "#ff6b6b", "bg": "#ffffff" },
+  "textStyles": { "title": { "font": "Inter", "size": 108, "color": "#1d2433", "bold": true, "italic": false, "underline": false, "lh": 1.1, "ls": 0, "tshadow": "" },
+                  "subtitle": {}, "h1": {}, "h2": {}, "h3": {}, "body": {}, "caption": {}, "quote": {} },
   "slides": [{
     "id": "…", "bg": { "type": "color|gradient|image", "color": "#fff", "color2": "…", "angle": 135, "src": "…" },
     "transition": { "effect": "cube-left", "duration": 1000, "easing": "" },
@@ -124,6 +129,10 @@ editable file can export and save new files with no network.
   "password": "…"  // optional: links and files are then encrypted ("e…" packs, or {"enc": "e…"} in files)
 }
 ```
+
+A text box linked to a style has `"ts": "h1"` (etc.) and keeps a copy of the style's values in its own `style`, so
+rendering never needs the styles: changing a style rewrites the linked texts (`PZ.setTextStyle` in `model.js`). A linked text
+always matches its style; on load, texts that do not are unlinked.
 
 Keyframes use `opacity`, `x` / `y` (percent of the slide), `scale`, `scaleX` / `scaleY` (stretch), `rotate`, `rotateX`,
 `rotateY`, `blur` and `clip` (`inset()`, `circle()`, `ellipse()`, `polygon()`), with optional `offset` and `easing`.

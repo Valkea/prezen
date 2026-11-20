@@ -1,7 +1,7 @@
-/* PrezEn · editor/dialogs: images, icons, share link, export, library, page setup, help. */
+/* PrezEn · editor/dialogs: images, icons, share link, export, library, page setup, text styles, help. */
 (function (PZ) {
   'use strict';
-  const h = PZ.h, E = PZ.ed, ui = PZ.ui, t = PZ.t;
+  const h = PZ.h, E = PZ.ed, ui = PZ.ui, t = PZ.t, tn = PZ.tn;
   const D = (PZ.edDialogs = {});
 
   // ---------------------------------------------------------------- image picker
@@ -314,6 +314,7 @@
       ui.row(t('Text'), ui.color(th.color, (v) => { th.color = v || th.color; })),
       ui.row(t('Accent'), ui.color(th.accent, (v) => { th.accent = v || th.accent; }), ui.color(th.accent2, (v) => { th.accent2 = v || th.accent2; })),
       ui.row(t('Background'), ui.color(th.bg, (v) => { th.bg = v || th.bg; })),
+      h('p', { class: 'ed-hint', text: t('Text styles that use the theme font or text colour follow them, with their texts.') }),
     ], buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: t('Apply'), primary: true, run: (c) => {
       c();
       E.commit('Page setup', (doc) => {
@@ -321,10 +322,66 @@
         if (scale && (nw !== doc.w || nh !== doc.h)) {
           const kx = nw / doc.w, ky = nh / doc.h, kf = Math.min(kx, ky);
           PZ.eachEl(doc, (el) => { el.x = Math.round(el.x * kx); el.y = Math.round(el.y * ky); el.w = Math.round(el.w * kx); el.h = Math.round(el.h * ky); if (el.style) el.style.size = Math.round(el.style.size * kf); });
+          // same rounding as the texts, so the linked ones still match their style
+          Object.values(doc.textStyles).forEach((st) => { st.size = Math.round(st.size * kf); });
         }
+        const old = doc.theme;
         doc.w = nw; doc.h = nh; doc.theme = th;
+        PZ.followTheme(doc, old);
       });
       PZ.loadFonts(E.doc);
+    } }] });
+  };
+
+  /** The deck's text styles: a specimen of every style, drawn on the slide colour, and the settings of the chosen one.
+   *  Apply changes every text using a changed style, on every slide. */
+  D.textStyles = function (o) {
+    o = o || {};
+    const d = E.doc, I = PZ.edInspector;
+    const ws = PZ.clone(d.textStyles);
+    const defaults = PZ.defaultTextStyles(d.theme, d.h);
+    let cur = PZ.isTextStyle(o.select) ? o.select : 'title';
+    const uses = PZ.textStyleUses(d);
+    const k = 400 / d.h; // specimen scale: sizes keep their proportions, about 40 % of a 1080 px slide
+    const slideBg = E.slide() ? E.slide().bg.color : d.theme.bg;
+    const spec = h('div', { class: 'dlg-ts-spec', style: { background: PZ.color(slideBg, '#ffffff') } });
+    const side = h('div', { class: 'dlg-ts-side' });
+    PZ.TEXT_STYLES.forEach((s) => PZ.loadFont(ws[s.id].font));
+
+    function renderSpec() {
+      spec.textContent = '';
+      for (const { id } of PZ.TEXT_STYLES) {
+        const st = ws[id];
+        const sample = h('span', { class: 'dlg-ts-sample', text: I.tsName(id) });
+        PZ.applyTextStyle(sample, Object.assign({}, st, { size: PZ.round(Math.max(9, st.size * k), 1), ls: PZ.round(st.ls * k, 2), align: 'left' }));
+        spec.appendChild(h('button', { class: 'dlg-ts-item' + (id === cur ? ' on' : ''), type: 'button', 'aria-pressed': String(id === cur), onClick: () => { cur = id; render(); } },
+          sample, h('span', { class: 'dlg-ts-meta', text: `${st.size} px` + (uses[id] ? ' · ' + tn('{n} text', '{n} texts', uses[id]) : '') })));
+      }
+    }
+    function renderSide() {
+      const st = ws[cur];
+      // toggles redraw their buttons; the other fields keep focus while typing or dragging
+      const onSet = (key, v) => { st[key] = v; if (['bold', 'italic', 'underline'].includes(key)) render(); else renderSpec(); };
+      side.textContent = '';
+      side.append(
+        h('h3', { class: 'dlg-ts-name', text: I.tsName(cur) }),
+        ...I.textStyleFields(st, onSet),
+        I.tsUsedHint(cur),
+        h('div', { class: 'ui-btn-row' }, h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Reset to default'), title: t('The default settings for this theme and page size'),
+          onClick: () => { ws[cur] = PZ.clone(defaults[cur]); PZ.loadFont(ws[cur].font); render(); } })));
+    }
+    function render() { renderSpec(); renderSide(); }
+    render();
+
+    ui.modal({ title: t('Text styles'), wide: true, content: [
+      h('p', { class: 'ed-hint dlg-ts-intro', text: t('Use the same title, heading and body settings on every slide. Changing a style changes every text that uses it, in the whole presentation. Changing one of these settings on a single text makes that text custom.') }),
+      h('div', { class: 'dlg-ts' }, spec, side),
+    ], buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: t('Apply'), primary: true, run: (c) => {
+      c();
+      const changed = PZ.TEXT_STYLES.map((s) => s.id).filter((id) => PZ.TS_KEYS.some((key) => ws[id][key] !== d.textStyles[id][key]));
+      if (!changed.length) return;
+      E.update('Text styles', (doc) => changed.forEach((id) => PZ.setTextStyle(doc, id, ws[id])), { refresh: 'stage slides inspector' });
+      changed.forEach((id) => PZ.loadFont(ws[id].font));
     } }] });
   };
 

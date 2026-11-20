@@ -169,9 +169,15 @@
     E.select([el.id]);
     return el;
   }
+  /** New text box, linked to the Body text style unless o.ts names another one (o.ts: '' for none). */
   E.insertText = function (o) {
     const d = E.doc;
-    const el = PZ.make.text(d, Object.assign(center(d.w * 0.5, d.h * 0.1), { html: t('Your text'), style: { size: Math.round(d.h * 0.045) } }, o));
+    o = Object.assign({ ts: 'body' }, o);
+    const ts = d.textStyles && d.textStyles[o.ts];
+    const wide = ['title', 'subtitle', 'h1', 'quote'].includes(o.ts);
+    const box = center(d.w * (wide ? 0.8 : 0.5), ts ? ts.size * ts.lh : d.h * 0.1);
+    const el = PZ.make.text(d, Object.assign(box, { html: t('Your text'), style: ts ? { align: o.ts === 'title' || o.ts === 'subtitle' ? 'center' : 'left' } : { size: Math.round(d.h * 0.045) } }, o));
+    if (ts) PZ.loadFont(ts.font);
     insert(el, 'Add text');
     setTimeout(() => PZ.edStage.startEdit(el.id, true), 30);
   };
@@ -254,6 +260,7 @@
     if (!clip || !clip.els) return false;
     const same = clip.els.every((c) => E.find(c.id));
     const copies = clip.els.map((c) => PZ.normalizeEl(Object.assign(PZ.reId(c), same ? { x: c.x + 30, y: c.y + 30 } : {}), E.doc.theme)).filter(Boolean);
+    copies.forEach((c) => { if (c.ts && PZ.textStyleModified(E.doc, c)) delete c.ts; }); // from another deck, or the style changed since the copy
     E.commit('Paste', (d, s) => { Object.assign(d.assets, clip.assets || {}); s.els.push(...copies); });
     E.select(copies.map((c) => c.id));
     return true;
@@ -431,12 +438,20 @@
       { label: E.doc.password ? t('Password protection: on…') : t('Password protection…'), icon: E.doc.password ? 'lock' : 'unlock', run: () => PZ.edDialogs.password() },
       '-',
       { label: t('Page size & theme…'), icon: 'sliders', run: () => PZ.edDialogs.pageSetup() },
+      { label: t('Text styles…'), icon: 'type', run: () => PZ.edDialogs.textStyles() },
       { label: E.funOn() ? t('Fun effects: on') : t('Fun effects: off'), icon: 'sparkles', run: () => E.setFun(!E.funOn()) },
       { label: t('Theme: {name}', { name: t(THEMES[E.theme()][0]) }), icon: THEMES[E.theme()][1], run: () => themeMenu(anchor) },
       { label: t('Language: {name}', { name: PZ.LANGS[PZ.lang] }), icon: 'globe', run: () => langMenu(anchor) },
       { label: t('Keyboard shortcuts'), icon: 'keyboard', kbd: '?', run: () => PZ.edDialogs.shortcuts() },
       { label: t('About PrezEn & privacy'), icon: 'info', run: () => PZ.edDialogs.about() },
     ]);
+  }
+
+  /** Toolbar menu next to Text: add a text box already in one of the deck's text styles. */
+  function textMenu(anchor) {
+    ui.menu(anchor, [{ header: t('Add text') }]
+      .concat(PZ.TEXT_STYLES.map((s) => ({ label: t(s.name), icon: s.id === 'body' ? 'type' : null, kbd: s.id === 'body' ? 'T' : '', run: () => E.insertText({ ts: s.id }) })))
+      .concat(['-', { label: t('Edit text styles…'), icon: 'sliders', run: () => PZ.edDialogs.textStyles() }]));
   }
 
   function shapesMenu(anchor) {
@@ -462,6 +477,7 @@
       h('div', { class: 'ed-tb-group' }, undoBtn, redoBtn),
       h('div', { class: 'ed-tb-group' },
         tb('type', t('Text'), () => E.insertText(), { title: t('Add text (T)') }),
+        tb('chevron-down', '', (a) => textMenu(a), { cls: 'ed-tb-more', title: t('Add a title, a heading… (text styles)') }),
         tb('image', t('Image'), () => PZ.edDialogs.image({ onPick: (ref) => E.insertImage(ref) }), { title: t('Add image (I)') }),
         tb('shapes', t('Shapes'), (a) => shapesMenu(a)),
         tb('star', t('Icons'), () => PZ.edDialogs.icons({ onPick: (svg, name) => E.insertIcon(svg, name) })),

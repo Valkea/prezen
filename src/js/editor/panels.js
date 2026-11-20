@@ -1,7 +1,7 @@
 /* PrezEn · editor/panels: slide list (left) and properties inspector (right). */
 (function (PZ) {
   'use strict';
-  const h = PZ.h, E = PZ.ed, ui = PZ.ui, t = PZ.t;
+  const h = PZ.h, E = PZ.ed, ui = PZ.ui, t = PZ.t, tn = PZ.tn;
 
   // ================================================================ slides list
   const P = (PZ.edSlides = {});
@@ -168,12 +168,68 @@
   ];
   /** Picker options shared by font fields: each name drawn in its own font (Google ones load when the list opens). */
   const fontPick = { optStyle: (v) => ({ fontFamily: PZ.fontStack(v) }), onOpen: () => PZ.FONTS.forEach((f) => PZ.loadFont(f.name)) };
+  I.fontOptions = fontOptions;
+  I.fontPick = fontPick;
+
+  /** Picker options of the deck's text styles, each name drawn in its style's font, weight and slant. */
+  const tsOptions = (extra) => (extra || []).concat(PZ.TEXT_STYLES.map((s) => ({ value: s.id, label: t(s.name) })));
+  const tsPick = {
+    optStyle: (v) => {
+      const ts = E.doc.textStyles[v];
+      return ts ? { fontFamily: PZ.fontStack(ts.font), fontWeight: ts.bold ? '700' : '400', fontStyle: ts.italic ? 'italic' : 'normal' } : { fontFamily: '', fontWeight: '', fontStyle: '' };
+    },
+    onOpen: () => PZ.TEXT_STYLES.forEach((s) => PZ.loadFont(E.doc.textStyles[s.id].font)),
+  };
+  const tsName = (id) => t((PZ.TEXT_STYLES.find((s) => s.id === id) || {}).name || '');
+  I.tsName = tsName;
+  const custom = () => ({ value: '', label: t('Custom') });
+
+  /** Link texts to a style ('' makes them custom and keeps their look). A deliberate choice: no note. */
+  function useStyle(els, id) {
+    styleNote = null;
+    live('Text style', () => els.forEach((x) => PZ.useTextStyle(E.doc, x, id)), true);
+    if (id) PZ.loadFont(E.doc.textStyles[id].font);
+  }
+
+  /** Set when a setting changed on a styled text made it custom: {id, name}, shown under its style picker. */
+  let styleNote = null;
+  /** A style setting was changed on this text: it leaves its style (the picker then shows Custom, with a note). */
+  function leaveStyle(el) {
+    if (!el.ts || !PZ.textStyleModified(E.doc, el)) return;
+    styleNote = { id: el.id, name: tsName(el.ts) };
+    delete el.ts;
+    // only the style row is redrawn, so the field being changed (e.g. size with the arrow keys) keeps the focus
+    setTimeout(() => { if (tsRow && tsRow.isConnected && tsRow.dataset.id === el.id) tsRow.replaceWith(textStyleControls(el)); });
+  }
+  let tsRow = null; // the Text style row of the text shown in the inspector
+
+  /** The settings of a text style preset (Text styles dialog); onSet(key, value, done) applies one change. */
+  I.textStyleFields = function (st, onSet) {
+    const toggle = (icon, title, key) => ui.iconBtn(icon, t(title), () => onSet(key, !st[key], true), { on: !!st[key] });
+    return [
+      ui.row(t('Font'), ui.pick(st.font, fontOptions(), (v) => { PZ.loadFont(v); onSet('font', v, true); }, Object.assign({ cls: 'ed-font-select' }, fontPick))),
+      ui.row(t('Size'), ui.number(st.size, (v, done) => onSet('size', Math.round(v), done), { min: 4, max: 1000, step: 1, unit: 'px', decimals: 0 }),
+        ui.color(st.color, (v, done) => { if (v) onSet('color', v, done); }, { palette: [E.doc.theme.color, E.doc.theme.accent, E.doc.theme.accent2, '#5c6577'], title: t('Text colour') })),
+      ui.row(t('Style'), h('div', { class: 'ui-btn-group' }, toggle('bold', 'Bold', 'bold'), toggle('italic', 'Italic', 'italic'), toggle('underline', 'Underline', 'underline'))),
+      ui.row(t('Line height'), ui.slider(st.lh, (v, done) => onSet('lh', v, done), { min: 0.7, max: 3, step: 0.05 })),
+      ui.row(t('Spacing'), ui.number(st.ls, (v, done) => onSet('ls', v, done), { min: -20, max: 100, step: 0.5, unit: 'px' })),
+      ui.row(t('Shadow'), ui.select(st.tshadow, [{ value: '', label: t('No text shadow') }, { value: 'text', label: t('Text shadow') }], (v) => onSet('tshadow', v, true))),
+    ];
+  };
+
+  /** Hint saying how many texts use a style. */
+  I.tsUsedHint = function (id) {
+    const n = PZ.textStyleUses(E.doc)[id] || 0;
+    return h('p', { class: 'ed-hint', text: n ? tn('Used by {n} text in this presentation.', 'Used by {n} texts in this presentation.', n)
+      : t('No text uses this style yet: pick it in the Text section of a text box, or add one from the menu next to Text.') });
+  };
 
   I.render = function () {
     if (!pane) return;
     const scroll = pane.scrollTop;
     pane.textContent = '';
     const els = E.selected();
+    if (styleNote && !(els.length === 1 && els[0].id === styleNote.id)) styleNote = null;
     if (!els.length) slidePanel();
     else if (els.length === 1) elementPanel(els[0]);
     else multiPanel(els);
@@ -223,6 +279,7 @@
         h('button', { class: 'ui-btn ui-small ui-ghost', onClick: () => PZ.edStudio.open({ scope: 'transition', select: tr.effect }) }, PZ.icon('sparkles'), h('span', { text: t('Studio') })))), { open: true }));
 
     animOrderSection(true);
+    pane.appendChild(ui.section('Text styles', h('button', { class: 'ui-btn ui-small', onClick: () => PZ.edDialogs.textStyles() }, PZ.icon('sliders'), h('span', { text: t('Edit text styles…') })), { open: true }));
 
     pane.appendChild(ui.section('Playback', h('div', null,
       ui.row(t('Auto-advance'), ui.number(s.auto, set('Auto-advance', (v) => { s.auto = v; }), { min: 0, max: 3600, step: 1, unit: 's', title: t('0 = wait for a click') })),
@@ -333,10 +390,11 @@
     const rich = () => PZ.edStage.hasTextSelection();
     const styleOrSel = (label, key, cmd, valueOf) => (v, done) => {
       if (rich() && cmd) { PZ.edStage.execText(cmd, valueOf ? valueOf(v) : v); return; }
-      live(label, () => { st[key] = v; }, false);
+      live(label, () => { st[key] = v; leaveStyle(el); }, false);
       if (done) E.refresh('inspector');
     };
     if (!isText) box.appendChild(h('p', { class: 'ed-hint', text: t('Double-click the shape (or press Enter) to type in it.') }));
+    if (isText) box.appendChild(textStyleControls(el));
     box.appendChild(ui.row(t('Font'), ui.pick(st.font, fontOptions(), styleOrSel('Font', 'font', 'fontName'), Object.assign({
       cls: 'ed-font-select',
       // with words selected the pick only restyles them, so a whole-box preview would mislead
@@ -344,11 +402,11 @@
     }, fontPick))));
     box.appendChild(ui.row(t('Size'), ui.number(st.size, (v, done) => {
       if (rich()) { if (done) PZ.edStage.execText('fontSizePx', v); return; }
-      live('Font size', () => { st.size = v; });
+      live('Font size', () => { st.size = v; leaveStyle(el); });
     }, { min: 4, max: 1000, step: 1, unit: 'px' }), ui.color(st.color, styleOrSel('Text colour', 'color', 'foreColor'), { palette: [E.doc.theme.color, E.doc.theme.accent, E.doc.theme.accent2], title: t('Text colour') })));
     const toggle = (icon, title, key, cmd) => ui.iconBtn(icon, t(title), () => {
       if (rich() || (E.editing && E.editing.id === el.id && cmd !== null && rich())) { PZ.edStage.execText(cmd); return; }
-      live(title, () => { st[key] = !st[key]; }, true);
+      live(title, () => { st[key] = !st[key]; leaveStyle(el); }, true);
     }, { on: !!st[key] });
     box.appendChild(ui.row(t('Style'),
       h('div', { class: 'ui-btn-group' }, toggle('bold', 'Bold', 'bold', 'bold'), toggle('italic', 'Italic', 'italic', 'italic'), toggle('underline', 'Underline', 'underline', 'underline'),
@@ -357,9 +415,9 @@
         ui.iconBtn('list-ordered', t('Numbered list'), () => withEdit(el, () => PZ.edStage.execText('insertOrderedList'))))));
     box.appendChild(ui.row(t('Align'), ui.seg(st.align, [['left', 'Left'], ['center', 'Center'], ['right', 'Right'], ['justify', 'Justify']].map(([a, l]) => ({ value: a, icon: 'align-' + a, title: t(l) })), set('Align', (v) => { st.align = v; })),
       ui.seg(st.valign, [{ value: 'top', icon: 'valign-top', title: t('Top') }, { value: 'middle', icon: 'valign-middle', title: t('Middle') }, { value: 'bottom', icon: 'valign-bottom', title: t('Bottom') }], set('Vertical align', (v) => { st.valign = v; }))));
-    box.appendChild(ui.row(t('Line height'), ui.slider(st.lh, set('Line height', (v) => { st.lh = v; }), { min: 0.7, max: 3, step: 0.05 })));
-    box.appendChild(ui.row(t('Spacing'), ui.number(st.ls, set('Letter spacing', (v) => { st.ls = v; }), { min: -20, max: 100, step: 0.5, unit: 'px' }),
-      ui.select(st.tshadow, [{ value: '', label: t('No text shadow') }, { value: 'text', label: t('Text shadow') }], set('Text shadow', (v) => { st.tshadow = v; }))));
+    box.appendChild(ui.row(t('Line height'), ui.slider(st.lh, set('Line height', (v) => { st.lh = v; leaveStyle(el); }), { min: 0.7, max: 3, step: 0.05 })));
+    box.appendChild(ui.row(t('Spacing'), ui.number(st.ls, set('Letter spacing', (v) => { st.ls = v; leaveStyle(el); }), { min: -20, max: 100, step: 0.5, unit: 'px' }),
+      ui.select(st.tshadow, [{ value: '', label: t('No text shadow') }, { value: 'text', label: t('Text shadow') }], set('Text shadow', (v) => { st.tshadow = v; leaveStyle(el); }))));
     if (isText) {
       box.appendChild(ui.row(t('Box'), ui.color(st.bg, set('Text background', (v) => { st.bg = v; }, true), { allowNone: true, title: t('Box colour') }),
         ui.number(st.pad, set('Padding', (v) => { st.pad = v; }), { min: 0, max: 400, label: t('pad') }),
@@ -368,6 +426,17 @@
     } else box.appendChild(ui.row(t('Padding'), ui.number(st.pad, set('Padding', (v) => { st.pad = v; }), { min: 0, max: 400, unit: 'px' })));
     box.appendChild(h('p', { class: 'ed-hint', text: t('Select words while editing to style only them.') }));
     return box;
+  }
+
+  /** Text style row: pick the style of this text; when it was changed by hand, put it back or make it the style. */
+  /** Text style row: the style of this text, or Custom (with a note when a setting change just made it custom). */
+  function textStyleControls(el) {
+    const id = el.ts && E.doc.textStyles[el.ts] ? el.ts : '';
+    return (tsRow = h('div', { class: 'ed-ts', dataset: { id: el.id } },
+      ui.row(t('Text style'), ui.pick(id, tsOptions([custom()]), (v) => useStyle([el], v), tsPick),
+        ui.iconBtn('sliders', t('Edit text styles…'), () => PZ.edDialogs.textStyles({ select: id }))),
+      !id && styleNote && styleNote.id === el.id
+        ? h('p', { class: 'ed-hint ed-ts-note', text: t('Now custom: a setting of this text was changed, so it no longer follows {name}.', { name: styleNote.name }) }) : null));
   }
 
   /** Run a rich-text command, entering edit mode with everything selected if needed. */
@@ -523,6 +592,15 @@
       }, { previewDelay: 200, onPreview: (v) => PZ.edStage.previewEffect(els.slice().sort((p, q) => p.y - q.y || p.x - q.x), v !== SHOW_FUN && v) })),
       h('p', { class: 'ed-hint', text: t('One click plays them one after the other, top to bottom.') }))));
     animOrderSection();
+    const texts = els.filter((x) => x.type === 'text');
+    if (texts.length) {
+      const same = texts.every((x) => (x.ts || '') === (texts[0].ts || '')) ? texts[0].ts || '' : '*';
+      pane.appendChild(ui.section('Text style', h('div', null,
+        ui.row(t('Text style'), ui.pick(same, tsOptions([same === '*' ? { value: '*', label: t('Mixed') } : null, custom()].filter(Boolean)),
+          (v) => { if (v !== '*') useStyle(texts, v); }, tsPick),
+        ui.iconBtn('sliders', t('Edit text styles…'), () => PZ.edDialogs.textStyles({ select: same === '*' ? '' : same }))),
+        h('p', { class: 'ed-hint', text: tn('Applies to the {n} selected text.', 'Applies to the {n} selected texts.', texts.length) })), { open: true }));
+    }
     pane.appendChild(ui.section('Appearance', ui.row(t('Opacity'), ui.slider(Math.round(els[0].opacity * 100), set('Opacity', (v) => els.forEach((x) => { x.opacity = v / 100; })), { min: 0, max: 100, fmt: (v) => v + '%' }))));
   }
 })(window.PZ = window.PZ || {});

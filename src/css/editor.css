@@ -43,6 +43,8 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-tb:hover { background: var(--hover); }
 .ed-tb:disabled { opacity: 0.35; cursor: default; background: none; }
 .ed-tb .pz-ico { width: 18px; height: 18px; }
+.ed-tb.ed-tb-more { padding: 0 3px; margin-left: -3px; }
+.ed-tb.ed-tb-more .pz-ico { width: 14px; height: 14px; color: var(--muted); }
 .ed-present, .ed-present-more { all: unset; display: inline-flex; align-items: center; gap: 6px; height: 34px; background: var(--accent); color: var(--accent-text); cursor: pointer; font-weight: 600; }
 .ed-present { padding: 0 14px; border-radius: 8px 0 0 8px; margin-left: 6px; }
 .ed-present-more { padding: 0 7px; border-radius: 0 8px 8px 0; border-left: 1px solid color-mix(in srgb, var(--accent-text) 25%, transparent); }
@@ -310,6 +312,18 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .dlg-about-logo { width: 72px; height: 72px; margin: 4px auto 10px; }
 .dlg-about-logo svg { width: 100%; height: 100%; display: block; }
 .dlg-about-link { text-align: center; margin: 0 0 12px; }
+/* text styles: a specimen on the slide colour (left) and the chosen style's settings (right) */
+.dlg-ts-intro { margin-top: 0; }
+.dlg-ts { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; align-items: start; }
+.dlg-ts-spec { display: flex; flex-direction: column; gap: 2px; padding: 8px; border-radius: 10px; box-shadow: 0 0 0 1px var(--line-2); }
+.dlg-ts-item { all: unset; display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 7px; cursor: pointer; min-height: 30px; }
+.dlg-ts-item:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sel) 45%, transparent); }
+.dlg-ts-item.on { box-shadow: inset 0 0 0 2px var(--sel); }
+.dlg-ts-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dlg-ts-sample { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlg-ts-meta { flex: none; font: 11px/1.4 system-ui, sans-serif; color: var(--muted); background: var(--panel); border-radius: 6px; padding: 1px 7px; }
+.dlg-ts-side { min-width: 0; }
+.dlg-ts-name { margin: 2px 0 8px; font-size: 15px; }
 .dlg-dedication { text-align: center; margin: 16px 0 0; color: var(--muted); font-style: italic; }
 
 /* ---------------------------------------------------------------- studio */
@@ -372,6 +386,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 }
 @media (max-width: 780px) {
   .ed-main { grid-template-columns: 0 minmax(0, 1fr) 0; }
+  .dlg-ts { grid-template-columns: 1fr; }
   .ed-slides, .ed-inspector { display: none; }
   .ed-brand-name, .ed-title { display: none; }
   /* stacked: the body scrolls again, the list keeps a cap */
