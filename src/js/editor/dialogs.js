@@ -408,7 +408,8 @@
       h('ul', { class: 'dlg-list' },
         h('li', { text: t('Your work is saved in this browser (IndexedDB) and in the files you export.') }),
         h('li', { text: t('Share links carry the whole presentation after the #: it is never sent to a server.') }),
-        h('li', { text: t('Only these requests leave your device: images you link to, Google Fonts when a slide uses one, and the online icon search (Iconify) when you use it.') }),
+        h('li', { text: PZ.edPdf.bundled() ? t('Only these requests leave your device: images you link to, Google Fonts when a slide uses one, and the online icon search (Iconify) when you use it.')
+          : t('Only these requests leave your device: images you link to, Google Fonts when a slide uses one, the online icon search (Iconify) when you use it, and the PDF reader (pdf.js, from jsDelivr) when you import a PDF.') }),
         h('li', { text: t('Exported files contain everything they need and run offline from any folder or flashdrive.') }),
         h('li', { text: t('The interface language is remembered in this browser and saved inside exported files.') })),
       h('p', { class: 'dlg-dedication', text: t('Made with love for my son Enki and his friends.') }),

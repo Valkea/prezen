@@ -13,11 +13,13 @@
     const add = h('button', { class: 'ed-add-slide', onClick: (e) => layoutMenu(e.currentTarget, E.cur) }, PZ.icon('plus'), h('span', { text: t('New slide') }));
     pane.append(list, add);
     // Drag-and-drop reordering is handled on the whole list, so the gaps between thumbnails and the empty space
-    // below the last one are drop targets too (dropping there moves the slide to the end).
+    // below the last one are drop targets too (dropping there moves the slide to the end). A PDF file dropped
+    // on the list is imported there.
     list.addEventListener('dragover', (e) => {
-      if (!e.dataTransfer.types.includes('text/x-prezen-slide')) return;
+      const pdf = draggingPdf(e.dataTransfer);
+      if (!pdf && !e.dataTransfer.types.includes('text/x-prezen-slide')) return;
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = pdf ? 'copy' : 'move';
       clearDropMarks();
       const items = list.children, to = dropIndex(e.clientY);
       if (to < items.length) items[to].classList.add('ed-drop-before');
@@ -25,6 +27,8 @@
     });
     list.addEventListener('dragleave', (e) => { if (!list.contains(e.relatedTarget)) clearDropMarks(); });
     list.addEventListener('drop', (e) => {
+      const pdf = Array.from(e.dataTransfer.files || []).find((f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+      if (pdf) { e.preventDefault(); e.stopPropagation(); clearDropMarks(); PZ.edPdf.open(pdf, dropIndex(e.clientY)); return; }
       const from = parseInt(e.dataTransfer.getData('text/x-prezen-slide'), 10);
       if (isNaN(from)) return;
       e.preventDefault(); e.stopPropagation();
@@ -52,22 +56,25 @@
     }
     return items.length;
   }
+  const draggingPdf = (dt) => Array.from(dt.items || []).some((it) => it.kind === 'file' && it.type === 'application/pdf');
   const clearDropMarks = () => PZ.$$('.ed-drop-before, .ed-drop-after', list).forEach((n) => n.classList.remove('ed-drop-before', 'ed-drop-after'));
 
   function layoutMenu(anchor, after) {
     const grid = h('div', { class: 'ed-layout-grid' });
     for (const L of PZ.LAYOUTS) {
       const tmp = PZ.newSlide(E.doc, L.id);
-      tmp.bg = PZ.clone(E.slide().bg);
+      tmp.bg = PZ.slideBgFor(E.doc, E.slide());
       grid.appendChild(h('button', { class: 'ed-layout-btn', onClick: () => { pop.close(); E.addSlide(L.id, after); } }, PZ.renderThumb(E.doc, tmp, 132), h('span', { text: t(L.name) })));
     }
-    const pop = ui.popover(anchor, h('div', { class: 'ed-pop-pad' }, h('div', { class: 'ui-menu-head', text: t('Choose a layout') }), grid));
+    const pdf = h('button', { class: 'ui-btn ui-small ed-layout-pdf', onClick: () => { pop.close(); PZ.edPdf.pick(after + 1); } }, PZ.icon('pdf'), h('span', { text: t('Import PDF pages…') }));
+    const pop = ui.popover(anchor, h('div', { class: 'ed-pop-pad' }, h('div', { class: 'ui-menu-head', text: t('Choose a layout') }), grid, pdf));
   }
 
   function slideMenu(anchor, i, at) {
     const s = E.doc.slides[i];
     ui.menu(anchor, [
       { label: t('New slide after'), icon: 'plus', kbd: 'N', run: () => layoutMenu(anchor, i) },
+      { label: t('Import PDF pages after…'), icon: 'pdf', run: () => PZ.edPdf.pick(i + 1) },
       { label: t('Duplicate'), icon: 'copy', kbd: 'Ctrl+D', run: () => E.duplicateSlide(i) },
       { label: s.hidden ? t('Stop skipping this slide') : t('Skip this slide when presenting'), icon: s.hidden ? 'eye' : 'eye-off', run: () => E.commit('Hide slide', () => { s.hidden = !s.hidden; }) },
       '-',
@@ -162,7 +169,13 @@
     return out;
   }
   const easingOptions = (withDefault) => (withDefault ? [{ value: '', label: t('Effect default') }] : []).concat(PZ.EASINGS.map((e) => ({ value: e.id, label: t(e.name) })));
-  const fontOptions = () => [
+  // fonts of this computer used in the deck (e.g. from an imported PDF) come first, so the pickers can show them
+  const fontOptions = () => {
+    const own = new Set();
+    E.doc.slides.forEach((s) => s.els.forEach((el) => { if (el.style && el.style.font && !PZ.font(el.style.font)) own.add(el.style.font); }));
+    return (own.size ? [{ group: t('In this presentation'), options: Array.from(own).sort().map((n) => ({ value: n, label: n })) }] : []).concat(fontOptionsBase());
+  };
+  const fontOptionsBase = () => [
     { group: t('Always available'), options: PZ.FONTS.filter((f) => f.google == null).map((f) => ({ value: f.name, label: t(f.name) })) },
     { group: t('Google Fonts (online, embeddable)'), options: PZ.FONTS.filter((f) => f.google != null).map((f) => ({ value: f.name, label: f.name })) },
   ];
@@ -255,7 +268,7 @@
       bgBody.appendChild(ui.row(t('Radial'), ui.toggle(bg.radial, set('Background', (v) => { bg.radial = v; }))));
     }
     if (bg.type === 'image') {
-      bgBody.appendChild(ui.row(t('Picture'), h('button', { class: 'ui-btn ui-small', text: bg.src ? t('Replace…') : t('Choose…'), onClick: () => PZ.edDialogs.image({ title: t('Background image'), onPick: (ref) => live('Background image', () => { bg.src = ref; }, true) }) }),
+      bgBody.appendChild(ui.row(t('Picture'), h('button', { class: 'ui-btn ui-small', text: bg.src ? t('Replace…') : t('Choose…'), onClick: () => PZ.edDialogs.image({ title: t('Background image'), onPick: (ref) => live('Background image', () => { bg.src = ref; bg.page = false; }, true) }) }),
         bg.src ? h('span', { class: 'ed-src-badge', text: t(PZ.SRC_LABELS[PZ.srcKind(bg.src)]) }) : null));
       bgBody.appendChild(ui.row(t('Fit'), ui.seg(bg.fit, [{ value: 'cover', label: t('Fill') }, { value: 'contain', label: t('Fit') }], set('Background', (v) => { bg.fit = v; }))));
       bgBody.appendChild(ui.row(t('Under'), ui.color(bg.color, set('Background', (v) => { bg.color = v || '#ffffff'; }))));

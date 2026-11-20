@@ -167,6 +167,7 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-shape-btn:hover { background: var(--hover); }
 .ed-shape-btn svg { position: static; width: 44px; height: 34px; overflow: visible; }
 .ed-layout-grid { display: grid; grid-template-columns: repeat(3, 132px); gap: 10px; }
+.ed-layout-pdf { margin-top: 10px; width: 100%; justify-content: center; }
 .ed-layout-btn { all: unset; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-size: 12px; color: var(--muted); text-align: center; }
 .ed-layout-btn .pz-thumb { border-radius: 5px; box-shadow: 0 0 0 1px var(--line-2); }
 .ed-layout-btn:hover .pz-thumb { box-shadow: 0 0 0 2px var(--accent); }
@@ -294,6 +295,13 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .dlg-card-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .dlg-card-text small { color: var(--muted); }
 .dlg-opts { margin: 10px 0 0; display: flex; flex-direction: column; }
+.dlg-pdf-head { display: flex; gap: 14px; align-items: center; margin: 2px 0 12px; }
+.dlg-pdf-prev { flex: none; width: 160px; height: 110px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--hover); }
+.dlg-pdf-prev canvas { max-width: 100%; max-height: 100%; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); }
+.dlg-pdf-file { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dlg-pdf-file b { overflow-wrap: anywhere; }
+.dlg-pdf-range { display: flex; align-items: center; gap: 8px; }
+.dlg-progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .dlg-lib { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 10px; }
 .dlg-lib-item { display: flex; flex-direction: column; gap: 6px; }
 .dlg-lib-item.on .pz-thumb { box-shadow: 0 0 0 2.5px var(--accent); }

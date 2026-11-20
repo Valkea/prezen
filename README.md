@@ -25,6 +25,9 @@
   The switch only shows them in the lists (remembered per browser): decks that use them always play them.
 - 🔤 **Text styles.** Title, Subtitle, Heading 1–3, Body, Caption and Quote are set once per presentation
   (slide panel or **Menu → Text styles…**) and picked per text box: change a style and every text using it follows, on every slide.
+- 📄 **PDF import.** Bring in the pages of a PDF (Beamer, Keynote, PowerPoint or Google Slides export…) as new slides,
+  **editable** (text boxes with their fonts, colours and line breaks, pictures you can move, the rest as the slide
+  background) or as **pictures** (each page exactly as in the PDF).
 - 🖨️ **PDF export** through the browser's print engine: vector text, one page per slide, or an A4 handout
   with speaker notes.
 
@@ -38,6 +41,7 @@
 | Present anywhere, light file | **Export → Slideshow (HTML)**: one file with the deck and the player only (~120 KB + images). |
 | Edit from a flashdrive | **Export → Editable presentation (HTML)**, or **Ctrl+S**. Open it from the drive, edit, **Ctrl+S** again. In Chrome/Edge the file is overwritten in place (pick the same file once); other browsers download an updated copy. |
 | Print / PDF | **Ctrl+P** or **Export → PDF**, then *Save as PDF* in the print dialog. |
+| Reuse slides from a PDF | **Menu → Import PDF as slides…**, *Import PDF pages…* under **New slide**, or drop a `.pdf` on the slide list (where it lands is where the pages go) or on the slide. Pick the pages, **Editable** or **Pictures**, the resolution, and whether each page's text goes into the speaker notes. Password-protected PDFs ask for their password. |
 | Keep the raw data | **Export → Data (JSON)**. The app opens `.json` and exported `.html` files (menu, or drop them on the canvas). |
 | Same title / heading settings everywhere | Pick a **Text style** at the top of a text box's *Text* section (or several boxes at once), or add a box already styled from the arrow next to **Text** in the toolbar. The styles belong to the whole presentation: edit them with **Edit text styles…** in the slide panel (nothing selected) or **Menu → Text styles…**: font, size, colour, bold / italic / underline, line height, spacing, text shadow. Every text using a style follows, on every slide. Changing one of these settings on a single text makes it **Custom** (a note says so). Alignment, box and padding stay per text. New slides from layouts use the styles. |
 | Switch language (English / Français) | Click **EN/FR** in the status bar (or **Menu → Language**), or the **EN/FR** button of a slideshow. The choice is remembered in this browser and saved inside exported files, so a file opened on another computer keeps its language. |
@@ -62,6 +66,19 @@ drag the frame's handles to crop, drag the picture to move it, its round corner 
 or **Done**. The Image section also has the exact **Crop** values (top, bottom, left, right, in %); the kept part is
 placed like a whole picture (Fill / Fit / Stretch, Focus) and **Fit frame to picture** resizes the frame to match it.
 
+### Importing a PDF
+
+- **Editable**: the text becomes text boxes (font, size, colour, bold / italic, alignment, line spacing; the lines of a
+  paragraph reflow, list lines keep their breaks), the pictures become images you can move or crop, and what is left
+  (shapes, gradients, decorations) becomes the slide's background picture. A text keeps its PDF font when this
+  computer has it (Helvetica, Times and Courier become Arial, Times New Roman and Courier New, their metric twins);
+  otherwise a similar font is used and the text is resized a little so its lines break where they do in the PDF.
+  Turned text keeps its angle; text hidden in the PDF (the text layer of scanned pages) is left out.
+- **Pictures**: each page becomes the picture behind its slide, exactly as in the PDF, but not editable.
+
+In both modes, a page that is not the shape of the slides is centred and the rest of the slide takes the colour of its
+edges. Pages whose fonts carry no readable text (rare, old PDFs) keep their text in the background picture.
+
 ### Presenting
 
 <kbd>→</kbd> <kbd>Space</kbd> <kbd>PgDn</kbd> next (clickers work) · <kbd>←</kbd> previous · <kbd>O</kbd> overview ·
@@ -79,7 +96,15 @@ No framework and no npm dependency: plain JavaScript (classic scripts, so the ap
 npm run dev        # static server → http://localhost:5173 (sources) and /dist/ (built file)
 npm test           # unit tests (node --test) + build check
 npm run build      # dist/index.html and dist/PrezEn.html (identical single files)
+npm run build:pdfjs  # same, with pdf.js inside (~1.85 MB): PDF import then works offline too
 ```
+
+PDF import uses [pdf.js](https://mozilla.github.io/pdf.js/) (Mozilla, Apache-2.0). The normal build fetches it from
+jsDelivr the first time a PDF is imported, and the browser checks it against the SHA-384 hashes in
+`src/js/editor/pdf.js` (Subresource Integrity). `build:pdfjs` (or `node build.mjs --pdfjs`) downloads the same files once
+into `vendor/`, checks the same hashes, and inlines them as inert `<script type="text/plain">` nodes that run only when
+a PDF is imported; editable files exported from that build carry them too. To update pdf.js, change the version and
+hashes in `src/js/editor/pdf.js` (it must be a 3.x build: the last with classic, non-module scripts).
 
 Every push to `main` runs the tests, builds, and deploys `dist/` to GitHub Pages
 (`.github/workflows/pages.yml`; enable *Settings → Pages → Source: GitHub Actions* once).
@@ -103,6 +128,7 @@ created from a local file point there.
 | `src/js/codec.js` | Share links: JSON → deflate (`CompressionStream`) → base64url, optional password encryption (Web Crypto) and its prompt |
 | `src/js/storage.js`, `export.js` | Browser library, file open/save, self-contained HTML export |
 | `src/js/editor/*` | Editor UI: stage, panels, dialogs, Studio, welcome deck |
+| `src/js/editor/pdf.js` | PDF import: loads pdf.js on demand (bundled or jsDelivr); editable mode turns a page's text and pictures into elements (its text is removed from the background by replaying pdf.js's operator list without it), picture mode renders each page |
 | `src/js/boot.js` | Chooses what to open (link, embedded data, last deck) |
 
 Scripts and styles marked `data-pz` in `index.html` are the app; those also marked `data-player` make up the
@@ -118,7 +144,7 @@ editable file can export and save new files with no network.
   "textStyles": { "title": { "font": "Inter", "size": 108, "color": "#1d2433", "bold": true, "italic": false, "underline": false, "lh": 1.1, "ls": 0, "tshadow": "" },
                   "subtitle": {}, "h1": {}, "h2": {}, "h3": {}, "body": {}, "caption": {}, "quote": {} },
   "slides": [{
-    "id": "…", "bg": { "type": "color|gradient|image", "color": "#fff", "color2": "…", "angle": 135, "src": "…" },
+    "id": "…", "bg": { "type": "color|gradient|image", "color": "#fff", "color2": "…", "angle": 135, "src": "…", "page": false },
     "transition": { "effect": "cube-left", "duration": 1000, "easing": "" },
     "auto": 0, "hidden": false, "notes": "…",
     "els": [{ "type": "text|image|shape|icon", "x": 0, "y": 0, "w": 400, "h": 200, "rot": 0, "opacity": 1,
@@ -134,6 +160,9 @@ A text box linked to a style has `"ts": "h1"` (etc.) and keeps a copy of the sty
 rendering never needs the styles: changing a style rewrites the linked texts (`PZ.setTextStyle` in `model.js`). A linked text
 always matches its style; on load, texts that do not are unlinked.
 
+A background with `"page": true` is the picture of an imported PDF page: a new slide added after it starts with the
+theme's background colour instead of a copy of that page.
+
 Keyframes use `opacity`, `x` / `y` (percent of the slide), `scale`, `scaleX` / `scaleY` (stretch), `rotate`, `rotateX`,
 `rotateY`, `blur` and `clip` (`inset()`, `circle()`, `ellipse()`, `polygon()`), with optional `offset` and `easing`.
 An effect may also name a particle `scene` from `fun.js` (e.g. `"scene": "confetti"`); transitions with a scene play
@@ -142,8 +171,9 @@ forward when going back instead of being rewound.
 ## Privacy
 
 Only these requests leave the device: pictures you link to, Google Fonts when a slide uses one (system
-fonts never load anything; fonts can be embedded on export), and the online icon search (Iconify) when you
-use it. Nothing else: no analytics, no cookies.
+fonts never load anything; fonts can be embedded on export), the online icon search (Iconify) when you
+use it, and pdf.js from jsDelivr when you import a PDF (not with `build:pdfjs`; the PDF itself never leaves the
+browser). Nothing else: no analytics, no cookies.
 
 ## Roadmap ideas
 

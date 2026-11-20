@@ -285,3 +285,16 @@ test('keyframes: stretch (scaleX / scaleY) only when used', () => {
   assert.match(k[1].transform, / scale\(1, 1\)$/);
   assert.match(PZ.toKeyframes([{ scale: 2 }, {}], 100, 100)[0].transform, /rotateY\(0deg\) scale\(2\)$/);
 });
+
+test('imported PDF pages keep their page flag, and new slides do not copy their picture', () => {
+  const d = PZ.newDoc({});
+  d.slides[0].bg = { type: 'image', src: 'asset:a1', fit: 'contain', color: '#336699', page: true };
+  const n = PZ.normalizeDoc(plain(d));
+  assert.equal(n.slides[0].bg.page, true);
+  assert.equal(PZ.normalizeDoc(plain(PZ.newDoc({}))).slides[0].bg.page, false);
+  const next = PZ.slideBgFor(n, n.slides[0]);
+  assert.equal(next.type, 'color');
+  assert.equal(next.color, n.theme.bg);
+  n.slides[0].bg.page = false;
+  assert.deepEqual(plain(PZ.slideBgFor(n, n.slides[0])), plain(n.slides[0].bg));
+});

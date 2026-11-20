@@ -3,6 +3,7 @@
  * A presentation (doc) is plain JSON:
  *   { v:1, id, title, w, h, theme, slides:[slide], effects:{id: customEffect}, assets:{id: dataURL}, password? }
  *   slide:   { id, bg, transition:{effect, duration, easing}, auto, hidden, notes, els:[element] }
+ *   bg:      { type: color|gradient|image, color, color2, angle, radial, src, fit, overlay, overlayOpacity, page }
  *   element: { id, type:'text'|'image'|'shape'|'icon', x, y, w, h, rot, opacity, locked, shadow, link, anim, ... }
  * Coordinates are logical pixels of the slide (1920×1080 for 16:9) whatever the screen size.
  */
@@ -54,7 +55,11 @@
   PZ.fontStack = function (name) {
     const f = FONT_BY_NAME.get(name);
     if (f) return f.stack;
-    return typeof name === 'string' && /^[\w \-]{1,60}$/.test(name) ? `'${name}', sans-serif` : FONT_BY_NAME.get('Inter').stack;
+    if (typeof name !== 'string' || !/^[\w \-]{1,60}$/.test(name)) return FONT_BY_NAME.get('Inter').stack;
+    // a font of this computer (e.g. from an imported PDF): the generic family its name suggests when it is missing
+    const generic = /mono|courier|consol|menlo|monaco|code/i.test(name) ? 'monospace'
+      : /serif|times|roman|georgia|garamond|cambria|palatino|antiqua|baskerville|bodoni|didot|minion|caslon/i.test(name) && !/sans/i.test(name) ? 'serif' : 'sans-serif';
+    return `'${name}', ${generic}`;
   };
   PZ.googleFontUrl = function (name) {
     const f = FONT_BY_NAME.get(name);
@@ -220,6 +225,9 @@
     return doc;
   };
 
+  /** Background for a slide added after `prev`: the same one, except the picture of an imported PDF page. */
+  PZ.slideBgFor = (doc, prev) => (prev.bg.page && prev.bg.type === 'image' ? PZ.newSlide(doc).bg : PZ.clone(prev.bg));
+
   PZ.newSlide = function (doc, layout) {
     const s = {
       id: PZ.uid('s'), bg: { type: 'color', color: (doc.theme && doc.theme.bg) || '#ffffff' },
@@ -370,6 +378,7 @@
       type, color: C(b.color, '#ffffff'), color2: C(b.color2, '#5b5bf0'), angle: N(b.angle, 135),
       radial: !!b.radial, src: S(b.src, '', 8000000), fit: FITS.has(b.fit) ? b.fit : 'cover',
       overlay: C(b.overlay, '#000000'), overlayOpacity: PZ.clamp(N(b.overlayOpacity, 0), 0, 1),
+      page: !!b.page, // the picture of an imported PDF page: new slides do not copy it
     };
   }
 

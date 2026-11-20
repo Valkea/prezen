@@ -17,7 +17,8 @@
       try { text = await PZ.sourceText(node); } catch (e) {
         throw new Error(PZ.t('Cannot read the app files from a local folder. Use the single-file build (dist/PrezEn.html) or run “npm run dev”.'));
       }
-      out.push({ kind: node.tagName === 'SCRIPT' ? 'js' : 'css', name: node.getAttribute('data-pz'), player: node.hasAttribute('data-player'), text });
+      // type: inert data scripts (the bundled pdf.js, text/plain) must stay inert in the exported file
+      out.push({ kind: node.tagName === 'SCRIPT' ? 'js' : 'css', name: node.getAttribute('data-pz'), player: node.hasAttribute('data-player'), type: node.getAttribute('type') || '', text });
     }
     return out;
   };
@@ -69,7 +70,7 @@
     const data = { app: 'prezen', v: 1, mode, lang: PZ.lang };
     if (locked) data.enc = await PZ.lockPacked(await PZ.packJson(d), d.password); else data.doc = d;
     const payload = JSON.stringify(data).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16));
-    const attrs = (s) => `data-pz="${PZ.escapeHtml(s.name)}"${s.player ? ' data-player' : ''}`;
+    const attrs = (s) => `${s.type ? `type="${PZ.escapeHtml(s.type)}" ` : ''}data-pz="${PZ.escapeHtml(s.name)}"${s.player ? ' data-player' : ''}`;
     const css = sources.filter((s) => s.kind === 'css').map((s) => `<style ${attrs(s)}>\n${s.text}\n${END_STYLE}`);
     const js = sources.filter((s) => s.kind === 'js').map((s) => {
       if (/<\/script/i.test(s.text)) throw new Error('Source ' + s.name + ' cannot be inlined');

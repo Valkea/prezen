@@ -377,6 +377,8 @@
     canvas.classList.remove('ed-drop');
     const p = toLogical(e);
     const files = Array.from(e.dataTransfer.files || []);
+    const pdf = files.find((f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+    if (pdf) { PZ.edPdf.open(pdf); return; }
     const pres = files.find((f) => /\.(html?|json)$/i.test(f.name));
     if (pres) {
       try {

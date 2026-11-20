@@ -205,7 +205,7 @@
   E.addSlide = function (layout, after) {
     const s = PZ.newSlide(E.doc, layout || 'title-content');
     const prev = E.slide();
-    if (prev) { s.bg = PZ.clone(prev.bg); s.transition = PZ.clone(prev.transition); }
+    if (prev) { s.bg = PZ.slideBgFor(E.doc, prev); s.transition = PZ.clone(prev.transition); }
     const at = (after == null ? E.cur : after) + 1;
     E.commit('Add slide', (d) => d.slides.splice(at, 0, s));
     E.goSlide(at);
@@ -427,6 +427,7 @@
       { label: t('New presentation…'), icon: 'file-plus', run: () => PZ.edDialogs.newDoc() },
       { label: t('Open file…'), icon: 'folder-open', kbd: MOD + 'O', run: () => E.openFile() },
       { label: t('My presentations (this browser)'), icon: 'library', run: () => PZ.edDialogs.library() },
+      { label: t('Import PDF as slides…'), icon: 'pdf', run: () => PZ.edPdf.pick() },
       '-',
       { label: E.fileHandle ? t('Save to {name}', { name: E.fileHandle.name }) : t('Save as editable file…'), icon: 'save', kbd: MOD + 'S', run: () => E.save() },
       { label: t('Save a copy as…'), icon: 'copy', run: () => E.saveAs() },
