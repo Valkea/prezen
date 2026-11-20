@@ -3,7 +3,7 @@
   'use strict';
   const h = PZ.h, E = PZ.ed, t = PZ.t;
   const S = (PZ.edStage = {});
-  let canvas, stage, host, overlay, k = 0.5, resizeObs = null, globalsBound = false, spaceHeld = false;
+  let canvas, stage, host, overlay, k = 0.5, resizeObs = null, globalsBound = false, spaceHeld = false, panTool = false;
   const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
   const DIRS = { nw: [-1, -1], n: [0, -1], ne: [1, -1], e: [1, 0], se: [1, 1], s: [0, 1], sw: [-1, 1], w: [-1, 0] };
 
@@ -13,6 +13,7 @@
     overlay = h('div', { class: 'ed-overlay' });
     stage = h('div', { class: 'ed-stage' }, host, overlay);
     canvas.appendChild(stage);
+    if (panTool) canvas.classList.add('ed-pan');
     stage.addEventListener('pointerdown', onDown);
     stage.addEventListener('dblclick', onDbl);
     stage.addEventListener('contextmenu', onContext);
@@ -42,7 +43,7 @@
     window.addEventListener('blur', endPanMode);
   };
 
-  // ---------------------------------------------------------------- pan: hold Space over the canvas and drag
+  // ---------------------------------------------------------------- pan: the hand tool, or hold Space over the canvas, and drag
   function onSpaceDown(e) {
     if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey) return;
     if (spaceHeld) { e.preventDefault(); return; } // auto-repeat
@@ -54,10 +55,17 @@
   }
   function endPanMode() {
     spaceHeld = false;
-    if (canvas) canvas.classList.remove('ed-pan');
+    if (canvas) canvas.classList.toggle('ed-pan', panTool);
   }
+  /** The hand tool: every drag on the canvas pans until the select tool is picked again. */
+  S.setPanTool = function (on) {
+    panTool = !!on;
+    if (panTool) { if (E.editing) S.endEdit(); if (crop) S.endCrop(); }
+    endPanMode();
+    if (E.renderStatus) E.renderStatus();
+  };
   function onPanDown(e) {
-    if (!spaceHeld || e.button !== 0) return;
+    if (!(spaceHeld || panTool) || e.button !== 0) return;
     e.preventDefault(); e.stopImmediatePropagation();
     const x0 = e.clientX, y0 = e.clientY, sl = canvas.scrollLeft, st = canvas.scrollTop;
     canvas.classList.add('ed-panning');
@@ -95,8 +103,12 @@
     canvas.scrollTop += s1.top + ly * k - ay;
   };
   S.zoomControl = function () {
+    const tool = (on, icon, title, pan) => h('button', { class: 'ed-zoom-btn ed-tool' + (on ? ' ed-on' : ''), title, 'aria-label': title, 'aria-pressed': String(on), onClick: () => S.setPanTool(pan) }, PZ.icon(icon));
+    const tools = h('span', { class: 'ed-tools' },
+      tool(!panTool, 'pointer', t('Select tool'), false),
+      tool(panTool, 'hand', t('Hand tool: drag to move around the slide (or hold Space)'), true));
     const pct = h('button', { class: 'ed-zoom-pct', title: t('Fit to window'), text: (E.zoom === 'fit' ? t('Fit') + ' · ' : '') + Math.round(k * 100) + '%', onClick: () => S.setZoom('fit') });
-    return h('span', { class: 'ed-zoom' },
+    return h('span', { class: 'ed-zoom' }, tools,
       h('button', { class: 'ed-zoom-btn', title: t('Zoom out (Ctrl+wheel)'), text: '−', onClick: () => S.setZoom(PZ.clamp(k / 1.25, 0.1, 4)) }), pct,
       h('button', { class: 'ed-zoom-btn', title: t('Zoom in (Ctrl+wheel)'), text: '+', onClick: () => S.setZoom(PZ.clamp(k * 1.25, 0.1, 4)) }));
   };
