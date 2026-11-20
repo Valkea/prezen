@@ -80,7 +80,7 @@
 
   /** Plain text version of rich text (titles in lists, notes…). */
   PZ.htmlToText = function (html) {
-    const doc = getParser().parseFromString('<!doctype html><body>' + PZ.sanitizeHtml(html).replace(/<(br|\/div|\/p|\/li)>/gi, '\n$&'), 'text/html');
+    const doc = getParser().parseFromString('<!doctype html><body>' + PZ.sanitizeHtml(html).replace(/<(br|\/div|\/p|\/li|\/blockquote)>/gi, '\n$&'), 'text/html');
     return doc.body.textContent.replace(/\n{2,}/g, '\n').trim();
   };
 

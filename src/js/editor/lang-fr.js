@@ -496,6 +496,8 @@
     'Arrows (Shift)': 'Flèches (Maj)',
     'Nudge 1 px (10 px)': 'Décaler de 1 px (10 px)',
     'Enter / double-click': 'Entrée / double-clic',
+    'Tab / Shift Tab': 'Tab / Maj Tab',
+    'Indent / outdent paragraphs and list items (while typing)': 'Augmenter / réduire le retrait des paragraphes et des puces (pendant la saisie)',
     'Esc': 'Échap',
     'Stop editing / deselect': 'Terminer la saisie / désélectionner',
     'Forward / backward (Shift: front / back)': 'Avancer / reculer (Maj : premier / arrière-plan)',

@@ -10,7 +10,9 @@
 
 .pz-textbox { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .pz-text { flex: none; white-space: pre-wrap; overflow-wrap: break-word; outline: none; min-height: 1em; }
-.pz-text p, .pz-text div, .pz-text h1, .pz-text h2, .pz-text h3, .pz-text blockquote { margin: 0; }
+.pz-text p, .pz-text div, .pz-text h1, .pz-text h2, .pz-text h3 { margin: 0; }
+/* indented paragraph (Tab while typing): one list step; !important beats the 40px margin the browser writes inline while editing */
+.pz-text blockquote { margin: 0 0 0 1.25em !important; padding: 0 !important; border: 0 !important; }
 .pz-text ul, .pz-text ol { margin: 0; padding-left: 1.25em; }
 .pz-text li { margin: 0.1em 0; }
 .pz-text ul li::marker { color: currentColor; }

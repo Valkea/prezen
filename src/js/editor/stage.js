@@ -576,6 +576,8 @@
   }
   function onEditKey(e) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); S.endEdit(); return; }
+    if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); e.stopPropagation(); S.indentText(e.shiftKey); return; }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[zy]$/i.test(e.key) && undoMove(/y/i.test(e.key) || e.shiftKey)) { e.preventDefault(); e.stopPropagation(); return; }
     if (((e.ctrlKey || e.metaKey) && /^[sop]$/i.test(e.key)) || e.key === 'F5') return; // save / open / print / present still work
     e.stopPropagation(); // keep the other editor shortcuts out of the text
   }
@@ -595,6 +597,7 @@
     ed.node.removeEventListener('paste', onEditPaste);
     ed.node.contentEditable = 'false';
     const el = E.find(ed.id);
+    dropEchoedStyle(ed.node);
     let html = PZ.sanitizeHtml(ed.node.innerHTML).replace(/^(<br>)+$/, '');
     if (!PZ.htmlToText(html).trim() && !/<li/.test(html)) html = '';
     const sel = window.getSelection();
@@ -622,6 +625,155 @@
     onInput();
     return true;
   };
+  /**
+   * Indent (or outdent) the paragraphs and list items of the selection in the text being edited. List items
+   * nest one level (a list inside the list, as browsers do it); outdenting moves them one level up, and a
+   * top-level item becomes a plain paragraph. Paragraphs move right in a <blockquote> (sized in player.css);
+   * text at the left edge stays.
+   */
+  S.indentText = function (outdent) {
+    const ed = E.editing;
+    if (!ed) return false;
+    const sel = window.getSelection();
+    if (!sel.rangeCount || !ed.node.contains(sel.anchorNode)) {
+      if (!ed.range) return false;
+      ed.node.focus();
+      sel.removeAllRanges();
+      sel.addRange(ed.range);
+    }
+    if (!moveItems(ed, sel.getRangeAt(0), outdent)) {
+      document.execCommand('styleWithCSS', false, false); // Firefox then makes a <blockquote>, not an inline margin the sanitizer drops
+      document.execCommand(outdent ? 'outdent' : 'indent');
+      document.execCommand('styleWithCSS', false, true);
+    }
+    onInput();
+    return true;
+  };
+
+  // List items are moved by hand: the browsers' list commands drop the blank lines inside an item, copy styles
+  // onto the moved words and, after a few presses, build lists they can no longer outdent.
+  const isList = (n) => !!n && (n.nodeName === 'UL' || n.nodeName === 'OL');
+  const pathOf = (root, n) => { const p = []; for (; n !== root; n = n.parentNode) p.unshift(Array.prototype.indexOf.call(n.parentNode.childNodes, n)); return p; };
+  const nodeAt = (root, p) => p.reduce((n, i) => n.childNodes[i], root);
+
+  /** The list items the range touches, outermost only (an item moves with the items nested in it). */
+  function itemsIn(root, range) {
+    const found = new Set();
+    const add = (n) => { const li = (n.nodeType === 1 ? n : n.parentNode).closest('li'); if (li && root.contains(li)) found.add(li); };
+    add(range.startContainer);
+    if (!range.collapsed) {
+      const walk = document.createTreeWalker(root, NodeFilter.SHOW_ALL);
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) if ((n.nodeType === 3 || n.nodeName === 'BR') && range.intersectsNode(n)) add(n);
+    }
+    const all = [...found];
+    return all.filter((li) => !all.some((o) => o !== li && o.contains(li)));
+  }
+
+  function indentItem(li) {
+    const list = li.parentNode;
+    if (!isList(list)) return;
+    const prev = li.previousElementSibling;
+    let sub = isList(prev) ? prev : prev && isList(prev.lastElementChild) ? prev.lastElementChild : null;
+    if (!sub) { sub = document.createElement(list.nodeName); list.insertBefore(sub, li); }
+    sub.appendChild(li);
+    const next = sub.nextElementSibling; // a nested list right after joins it, as in "two items at the same level"
+    if (isList(next) && next.nodeName === sub.nodeName) { sub.append(...next.childNodes); next.remove(); }
+  }
+
+  /** Returns the paragraph a top-level item became, if it did. */
+  function outdentItem(li) {
+    const list = li.parentNode;
+    if (!isList(list)) return null;
+    const outer = list.parentNode;
+    const rest = [];
+    for (let n = li.nextSibling; n; n = n.nextSibling) rest.push(n);
+    let tail = null; // the items after this one keep their level
+    if (rest.some((n) => n.nodeType === 1 || n.nodeValue.trim())) { tail = document.createElement(list.nodeName); tail.append(...rest); }
+    let made = null;
+    if (isList(outer)) { // <ul><ul><li>
+      outer.insertBefore(li, list.nextSibling);
+      if (tail) li.after(tail);
+    } else if (outer.nodeName === 'LI') { // <li>…<ul><li>
+      outer.after(li);
+      if (tail) li.appendChild(tail);
+    } else { // top level: a plain paragraph
+      made = document.createElement('div');
+      made.append(...li.childNodes);
+      list.after(made);
+      if (tail) made.after(tail);
+      li.remove();
+    }
+    if (!list.firstElementChild && !list.textContent.trim()) list.remove();
+    return made;
+  }
+
+  /**
+   * Move the list items of the range one level in or out; false when the range has no list item. The move is
+   * done on a copy that then takes the place of the text, so undo can put the original nodes back: the
+   * browser's own undo history (the typing before) refers to them.
+   */
+  function moveItems(ed, range, outdent) {
+    const root = ed.node;
+    const items = itemsIn(root, range);
+    if (!items.length) return false;
+    const copy = root.cloneNode(true);
+    const twin = (n) => nodeAt(copy, pathOf(root, n));
+    let sc = twin(range.startContainer), ec = twin(range.endContainer);
+    const so = range.startOffset, eo = range.endOffset;
+    for (const li of items.map(twin)) {
+      if (!outdent) { indentItem(li); continue; }
+      const para = outdentItem(li);
+      if (para && sc === li) sc = para;
+      if (para && ec === li) ec = para;
+    }
+    const step = { before: [...root.childNodes], beforeHtml: root.innerHTML, selBefore: [range.startContainer, so, range.endContainer, eo] };
+    root.replaceChildren(...copy.childNodes);
+    step.after = [...root.childNodes];
+    step.afterHtml = root.innerHTML;
+    step.selAfter = [sc, so, ec, eo];
+    if (step.afterHtml === step.beforeHtml) { root.replaceChildren(...step.before); select(step.selBefore); return true; }
+    (ed.undo = ed.undo || []).push(step);
+    ed.redo = [];
+    select(step.selAfter);
+    return true;
+  }
+  function select([sc, so, ec, eo]) {
+    const r = document.createRange();
+    try { r.setStart(sc, so); r.setEnd(ec, eo); } catch (err) { return; }
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+  /** Undo / redo of an item move, while the text is still as the move left it; false lets the browser undo. */
+  function undoMove(redo) {
+    const ed = E.editing;
+    const from = redo ? ed.redo : ed.undo, to = redo ? ed.undo : ed.redo;
+    const step = from && from[from.length - 1];
+    if (!step || ed.node.innerHTML !== (redo ? step.beforeHtml : step.afterHtml)) return false;
+    from.pop();
+    to.push(step);
+    ed.node.replaceChildren(...(redo ? step.after : step.before));
+    select(redo ? step.selAfter : step.selBefore);
+    onInput();
+    return true;
+  }
+
+  /**
+   * Chrome's editing commands wrap moved text in elements repeating the box's own spacing (letter-spacing: 0px)
+   * and the editor's caret colour, which would pin it when the box setting changes later. Spacing is only ever
+   * set on the whole box, so a value equal to what the element inherits anyway is dropped (and a span, once it
+   * has no style left).
+   */
+  function dropEchoedStyle(root) {
+    for (const n of root.querySelectorAll('[style]')) {
+      const own = n.style, cs = getComputedStyle(n), up = getComputedStyle(n.parentNode);
+      own.removeProperty('caret-color');
+      for (const p of ['letter-spacing', 'line-height']) if (own.getPropertyValue(p) && cs.getPropertyValue(p) === up.getPropertyValue(p)) own.removeProperty(p);
+      if (own.length) continue;
+      if (n.nodeName === 'SPAN') n.replaceWith(...n.childNodes);
+      else n.removeAttribute('style');
+    }
+  }
   S.hasTextSelection = function () {
     const ed = E.editing;
     return !!(ed && ed.range && !ed.range.collapsed);
