@@ -326,6 +326,7 @@
           PZ.eachEl(doc, (el) => { el.x = Math.round(el.x * kx); el.y = Math.round(el.y * ky); el.w = Math.round(el.w * kx); el.h = Math.round(el.h * ky); if (el.style) el.style.size = Math.round(el.style.size * kf); });
           // same rounding as the texts, so the linked ones still match their style
           Object.values(doc.textStyles).forEach((st) => { st.size = Math.round(st.size * kf); });
+          Object.values(doc.tsPos || {}).forEach((p) => { p.x = Math.round(p.x * kx); p.y = Math.round(p.y * ky); p.w = Math.round(p.w * kx); });
         }
         const old = doc.theme;
         doc.w = nw; doc.h = nh; doc.theme = th;
@@ -341,7 +342,9 @@
     o = o || {};
     const d = E.doc, I = PZ.edInspector;
     const ws = PZ.clone(d.textStyles);
+    const wp = PZ.clone(d.tsPos || {}); // style positions
     const defaults = PZ.defaultTextStyles(d.theme, d.h);
+    const picked = E.one() && E.one().type === 'text' ? E.one() : null; // the text selected on the slide, if any
     let cur = PZ.isTextStyle(o.select) ? o.select : 'title';
     const uses = PZ.textStyleUses(d);
     const k = 400 / d.h; // specimen scale: sizes keep their proportions, about 40 % of a 1080 px slide
@@ -357,8 +360,23 @@
         const sample = h('span', { class: 'dlg-ts-sample', text: I.tsName(id) });
         PZ.applyTextStyle(sample, Object.assign({}, st, { size: PZ.round(Math.max(9, st.size * k), 1), ls: PZ.round(st.ls * k, 2), align: 'left' }));
         spec.appendChild(h('button', { class: 'dlg-ts-item' + (id === cur ? ' on' : ''), type: 'button', 'aria-pressed': String(id === cur), onClick: () => { cur = id; render(); } },
-          sample, h('span', { class: 'dlg-ts-meta', text: `${st.size} px` + (uses[id] ? ' · ' + tn('{n} text', '{n} texts', uses[id]) : '') })));
+          sample, h('span', { class: 'dlg-ts-meta' }, `${st.size} px` + (uses[id] ? ' · ' + tn('{n} text', '{n} texts', uses[id]) : ''),
+            wp[id] ? h('span', { title: t('Has a position on the slides') }, PZ.icon('map-pin')) : null)));
       }
+    }
+    /** Position of the chosen style: X / Y / W fields, taken from the selected text, or removed. */
+    function posFields() {
+      const name = I.tsName(cur), p = wp[cur];
+      const num = (key, label, min) => ui.number(p[key], (v) => { p[key] = min ? Math.max(min, v) : v; }, { label, step: 1 });
+      const take = h('button', { class: 'ui-btn ui-small', disabled: !picked, title: picked ? '' : t('Select a text on the slide first'),
+        onClick: () => { wp[cur] = { x: picked.x, y: picked.y, w: picked.w }; render(); } }, PZ.icon('map-pin'), h('span', { text: t('Use the selected text’s place') }));
+      return h('div', { class: 'dlg-ts-pos' },
+        h('label', { class: 'ui-label' }, PZ.icon('map-pin'), h('span', { text: t('Position on the slides') })),
+        p ? h('div', { class: 'ed-grid3' }, num('x', 'X'), num('y', 'Y'), num('w', t('W'), 1)) : null,
+        h('div', { class: 'ui-btn-row' }, take,
+          p ? h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Remove position'), onClick: () => { delete wp[cur]; render(); } }) : null),
+        h('p', { class: 'ed-hint', text: p ? t('{name} texts snap to this position when moved (Alt: no snapping), and new ones start there. Several can still share a slide.', { name })
+          : t('No position: {name} texts go anywhere. Select a text on the slide where they should go, then use its place.', { name }) }));
     }
     function renderSide() {
       const st = ws[cur];
@@ -370,7 +388,8 @@
         ...I.textStyleFields(st, onSet),
         I.tsUsedHint(cur),
         h('div', { class: 'ui-btn-row' }, h('button', { class: 'ui-btn ui-small ui-ghost', text: t('Reset to default'), title: t('The default settings for this theme and page size'),
-          onClick: () => { ws[cur] = PZ.clone(defaults[cur]); PZ.loadFont(ws[cur].font); render(); } })));
+          onClick: () => { ws[cur] = PZ.clone(defaults[cur]); PZ.loadFont(ws[cur].font); render(); } })),
+        posFields());
     }
     function render() { renderSpec(); renderSide(); }
     render();
@@ -381,17 +400,21 @@
     ], buttons: [{ label: t('Cancel'), run: (c) => c() }, { label: t('Apply'), primary: true, run: (c) => {
       c();
       const changed = PZ.TEXT_STYLES.map((s) => s.id).filter((id) => PZ.TS_KEYS.some((key) => ws[id][key] !== d.textStyles[id][key]));
-      if (!changed.length) return;
-      E.update('Text styles', (doc) => changed.forEach((id) => PZ.setTextStyle(doc, id, ws[id])), { refresh: 'stage slides inspector' });
+      const posChanged = JSON.stringify(wp) !== JSON.stringify(d.tsPos || {});
+      if (!changed.length && !posChanged) return;
+      E.update('Text styles', (doc) => {
+        changed.forEach((id) => PZ.setTextStyle(doc, id, ws[id]));
+        if (posChanged) { if (Object.keys(wp).length) doc.tsPos = wp; else delete doc.tsPos; }
+      }, { refresh: 'stage slides inspector' });
       changed.forEach((id) => PZ.loadFont(ws[id].font));
     } }] });
   };
 
   D.shortcuts = function () {
-    const mod = PZ.isMac ? '⌘' : 'Ctrl', sh = t('Shift');
+    const mod = PZ.isMac ? '⌘' : 'Ctrl', sh = t('Shift'), alt = PZ.isMac ? '⌥' : 'Alt';
     const rows = [ // both columns go through t() when shown
       ['Editor', ''], [mod + ' S', 'Save (to the opened file, or as a new file)'], [mod + ' O', 'Open a file'], [mod + ' Z / ' + mod + ' ' + sh + ' Z', 'Undo / redo'],
-      [mod + ' C / X / V', 'Copy / cut / paste (also images and text from other apps)'], [mod + ' D', 'Duplicate'], [mod + ' A', 'Select all'],
+      [mod + ' C / X / V', 'Copy / cut / paste (also images and text from other apps)'], [mod + ' ' + alt + ' C / V', 'Copy / paste properties (position, size, format…)'], [mod + ' D', 'Duplicate'], [mod + ' A', 'Select all'],
       ['Del', 'Delete'], ['Arrows (Shift)', 'Nudge 1 px (10 px)'], ['Enter / double-click', 'Edit text'], ['Tab / Shift Tab', 'Indent / outdent paragraphs and list items (while typing)'],['Enter / double-click', 'Crop the selected picture'], ['Esc', 'Stop editing / deselect'],
       [mod + ' ] / [', 'Forward / backward (Shift: front / back)'], ['T · I · R · E', 'Add text · image · rectangle · ellipse'], ['N', 'New slide'],
       ['Page ↑ / ↓', 'Previous / next slide'], ['Alt drag', 'Move without snapping'], ['Shift drag', 'Keep proportions / straight lines / 15° steps'], [mod + ' ' + t('wheel'), 'Zoom'], ['Space drag', 'Pan (when zoomed in)'],

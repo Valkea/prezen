@@ -25,6 +25,9 @@
   The switch only shows them in the lists (remembered per browser): decks that use them always play them.
 - 🔤 **Text styles.** Title, Subtitle, Heading 1–3, Body, Caption and Quote are set once per presentation
   (slide panel or **Menu → Text styles…**) and picked per text box: change a style and every text using it follows, on every slide.
+  A style can also have a **position**: its texts snap to it when moved, without being pinned there.
+- 🖌️ **Copy / paste properties.** Copy an element's position, size, rotation, text format, appearance or animation
+  and paste any of them on other elements, on any slide (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> / <kbd>V</kbd>).
 - 📄 **PDF import.** Bring in the pages of a PDF (Beamer, Keynote, PowerPoint or Google Slides export…) as new slides,
   **editable** (text boxes with their fonts, colours and line breaks, pictures you can move, the rest as the slide
   background) or as **pictures** (each page exactly as in the PDF).
@@ -44,6 +47,8 @@
 | Reuse slides from a PDF | **Menu → Import PDF as slides…**, *Import PDF pages…* under **New slide**, or drop a `.pdf` on the slide list (where it lands is where the pages go) or on the slide. Pick the pages, **Editable** or **Pictures**, the resolution, and whether each page's text goes into the speaker notes. Password-protected PDFs ask for their password. |
 | Keep the raw data | **Export → Data (JSON)**. The app opens `.json` and exported `.html` files (menu, or drop them on the canvas). |
 | Same title / heading settings everywhere | Pick a **Text style** at the top of a text box's *Text* section (or several boxes at once), or add a box already styled from the arrow next to **Text** in the toolbar. The styles belong to the whole presentation: edit them with **Edit text styles…** in the slide panel (nothing selected) or **Menu → Text styles…**: font, size, colour, bold / italic / underline, line height, spacing, text shadow. Every text using a style follows, on every slide. Changing one of these settings on a single text makes it **Custom** (a note says so). Alignment, box and padding stay per text. New slides from layouts use the styles. |
+| Same title place on every slide | Select a text placed where you want it (e.g. a Heading 1), open **Edit text styles…** (icon next to its *Text style*), and under *Position on the slides* click **Use the selected text’s place** (or type X / Y / W). Texts in that style snap to it when you drag them near (a dashed frame shows it; <kbd>Alt</kbd> drag ignores it), the target icon next to a text's *Text style* puts it there in a click, and new texts added in that style start there. Nothing is pinned: a slide can hold several texts of one style anywhere. |
+| Give elements the same position, size, format… | Select the model and **Copy properties** (brush icon at the top of the panel, right-click menu, or <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd>). Select the other elements, on any slide, then **Paste properties…** (clipboard icon or right-click) and tick what to paste: position, size, rotation, text format (style included), appearance (opacity, shadow; fill, border… between elements of the same type), animation, or **Paste all**. <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>V</kbd> pastes the last ticked choice directly. The content (text, picture, icon) never changes. |
 | Switch language (English / Français) | Click **EN/FR** in the status bar (or **Menu → Language**), or the **EN/FR** button of a slideshow. The choice is remembered in this browser and saved inside exported files, so a file opened on another computer keeps its language. |
 
 ### Pictures
@@ -144,6 +149,7 @@ editable file can export and save new files with no network.
   "theme": { "font": "Inter", "color": "#1d2433", "accent": "#5b5bf0", "accent2": "#ff6b6b", "bg": "#ffffff" },
   "textStyles": { "title": { "font": "Inter", "size": 108, "color": "#1d2433", "bold": true, "italic": false, "underline": false, "lh": 1.1, "ls": 0, "tshadow": "" },
                   "subtitle": {}, "h1": {}, "h2": {}, "h3": {}, "body": {}, "caption": {}, "quote": {} },
+  "tsPos": { "h1": { "x": 134, "y": 86, "w": 1651 } },  // optional: style positions (snap target, place of new texts)
   "slides": [{
     "id": "…", "bg": { "type": "color|gradient|image", "color": "#fff", "color2": "…", "angle": 135, "src": "…", "page": false },
     "transition": { "effect": "cube-left", "duration": 1000, "easing": "" },

@@ -3,11 +3,14 @@
   'use strict';
   const h = PZ.h, ui = PZ.ui, t = PZ.t;
   const MOD = PZ.isMac ? '⌘' : 'Ctrl+';
+  const ALT = PZ.isMac ? '⌥' : 'Alt+';
 
   const E = (PZ.ed = {
-    doc: null, cur: 0, sel: [], undoStack: [], redoStack: [], editing: null, clipboard: null,
+    doc: null, cur: 0, sel: [], undoStack: [], redoStack: [], editing: null, clipboard: null, propClip: null,
     fileHandle: null, fileName: '', mode: 'browser', dirty: false, zoom: 'fit', saveState: '', isSample: false,
   });
+  /** Shortcuts of "Copy / Paste properties", as shown in menus and tooltips. */
+  E.PROPS_KEYS = { copy: MOD + ALT + 'C', paste: MOD + ALT + 'V' };
 
   // ---------------------------------------------------------------- state helpers
   E.slide = () => E.doc.slides[E.cur];
@@ -176,6 +179,8 @@
     const ts = d.textStyles && d.textStyles[o.ts];
     const wide = ['title', 'subtitle', 'h1', 'quote'].includes(o.ts);
     const box = center(d.w * (wide ? 0.8 : 0.5), ts ? ts.size * ts.lh : d.h * 0.1);
+    const home = o.x == null && PZ.stylePos(d, o.ts); // a style with a position: new texts start there
+    if (home) Object.assign(box, { x: home.x, y: home.y, w: home.w });
     const el = PZ.make.text(d, Object.assign(box, { html: t('Your text'), style: ts ? { align: o.ts === 'title' || o.ts === 'subtitle' ? 'center' : 'left' } : { size: Math.round(d.h * 0.045) } }, o));
     if (ts) PZ.loadFont(ts.font);
     insert(el, 'Add text');
@@ -263,6 +268,59 @@
     copies.forEach((c) => { if (c.ts && PZ.textStyleModified(E.doc, c)) delete c.ts; }); // from another deck, or the style changed since the copy
     E.commit('Paste', (d, s) => { Object.assign(d.assets, clip.assets || {}); s.els.push(...copies); });
     E.select(copies.map((c) => c.id));
+    return true;
+  };
+
+  // ---------------------------------------------------------------- style positions
+  /** Move a text to the position of its style (its place and width). */
+  E.toStylePos = function (el) {
+    const p = el && PZ.stylePos(E.doc, el.ts);
+    if (!p || el.locked || PZ.atStylePos(E.doc, el)) return;
+    E.update('Move to style position', () => { el.x = p.x; el.y = p.y; el.w = p.w; }, { refresh: 'stage thumb inspector' });
+  };
+
+  // ---------------------------------------------------------------- copy / paste properties
+  const PROPS_KEY = 'prezen:props', GROUPS_KEY = 'prezen:props-groups';
+  /** Copy the properties of the selected element (not its content), to paste them on other elements, on any slide. */
+  E.copyProps = function () {
+    const el = E.one();
+    if (!el) return false;
+    E.propClip = PZ.propsOf(el);
+    try { localStorage.setItem(PROPS_KEY, JSON.stringify(E.propClip)); } catch (e) { /* this tab only */ }
+    PZ.toast(t('Properties copied. Select other elements, on any slide, then Paste properties ({key}).', { key: E.PROPS_KEYS.paste }), { timeout: 3000 });
+    E.refresh('inspector');
+    return true;
+  };
+  /** The copied properties (also from another tab or presentation), checked like pasted elements; null when none. */
+  E.props = function () {
+    let raw = E.propClip;
+    try { const s = localStorage.getItem(PROPS_KEY); if (s) raw = JSON.parse(s); } catch (e) { /* ignore */ }
+    const el = raw && PZ.normalizeEl(raw, E.doc.theme);
+    return el ? PZ.propsOf(el) : null;
+  };
+  /** The groups chosen last time in Paste properties (position and size the first time). */
+  E.propGroups = function () {
+    let v = null;
+    try { v = JSON.parse(localStorage.getItem(GROUPS_KEY) || 'null'); } catch (e) { /* ignore */ }
+    const ids = PZ.PROP_GROUPS.map((g) => g.id);
+    return Array.isArray(v) ? v.filter((g) => ids.includes(g)) : ['pos', 'size'];
+  };
+  /** Paste groups of the copied properties (by default the last choice) on the selected elements. o.toast says what was
+   *  pasted; o.remember: false keeps the last choice as it was (Paste all). */
+  E.pasteProps = function (groups, o) {
+    const p = E.props(), s = E.slide(), els = E.selected();
+    if (!p) { PZ.toast(t('No properties copied yet: select an element and use Copy properties ({key}).', { key: E.PROPS_KEYS.copy })); return false; }
+    if (!els.length) return false;
+    groups = groups || E.propGroups();
+    if (!groups.length) { PZ.toast(t('Choose what to paste first.')); return false; }
+    if (!o || o.remember !== false) try { localStorage.setItem(GROUPS_KEY, JSON.stringify(groups)); } catch (e) { /* ignore */ }
+    const changed = els.filter((el) => PZ.pasteProps(E.doc, s, PZ.clone(el), p, groups)); // dry run, so no empty undo step
+    if (!changed.length) { PZ.toast(t('Nothing changed: the selection already has these properties, or cannot take them.')); return false; }
+    E.update('Paste properties', (d, sl) => changed.forEach((el) => PZ.pasteProps(d, sl, el, p, groups)), { refresh: 'stage thumb inspector' });
+    if (o && o.toast) {
+      const names = PZ.PROP_GROUPS.filter((g) => groups.includes(g.id)).map((g) => t(g.name)).join(', ');
+      PZ.toast(t('Pasted: {what}', { what: names }), { timeout: 1600 });
+    }
     return true;
   };
 
@@ -519,6 +577,11 @@
     if (mod && ((e.shiftKey && (k === 'z' || k === 'Z')) || k === 'y' || k === 'Y')) { e.preventDefault(); E.redo(); return; }
     if (mod && (k === 'a' || k === 'A')) { e.preventDefault(); E.select(E.slide().els.filter((x) => !x.locked).map((x) => x.id)); return; }
     if (mod && (k === 'd' || k === 'D')) { e.preventDefault(); if (E.sel.length) E.duplicateSel(); else E.duplicateSlide(); return; }
+    if (mod && e.altKey && (e.code === 'KeyC' || e.code === 'KeyV')) { // by key position: Option changes the letter on a Mac
+      e.preventDefault();
+      if (e.code === 'KeyC') E.copyProps(); else E.pasteProps(null, { toast: true });
+      return;
+    }
     if (mod && /^[cxv]$/i.test(k)) return; // handled by the copy / cut / paste events (they can carry images and text)
     if (mod && k === ']') { e.preventDefault(); E.zorder(e.shiftKey ? 'front' : 'forward'); return; }
     if (mod && k === '[') { e.preventDefault(); E.zorder(e.shiftKey ? 'back' : 'backward'); return; }

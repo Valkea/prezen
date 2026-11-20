@@ -132,6 +132,12 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-lock-tag .pz-ico, .ed-anim-tag .pz-ico { width: 13px; height: 13px; }
 .ed-marquee { position: absolute; border: 1px solid var(--sel); background: color-mix(in srgb, var(--sel) 12%, transparent); }
 .ed-guide { position: absolute; background: #ff3d8b; }
+.ed-home { position: absolute; border: 1.5px dashed color-mix(in srgb, var(--sel) 75%, transparent); border-radius: 2px; }
+.ed-home.ed-on { border: 1.5px solid #ff3d8b; }
+.ed-home-tag { position: absolute; left: -1.5px; bottom: 100%; margin-bottom: 4px; display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 5px; border-radius: 5px;
+  background: var(--sel); color: #fff; font: 600 10.5px/1.6 system-ui, sans-serif; white-space: nowrap; }
+.ed-home.ed-on .ed-home-tag { background: #ff3d8b; }
+.ed-home-tag .pz-ico { width: 11px; height: 11px; }
 .ed-gv { top: 0; bottom: 0; width: 1px; } .ed-gh { left: 0; right: 0; height: 1px; }
 .ed-trans-preview { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; z-index: 3; pointer-events: none; }
 
@@ -183,6 +189,16 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-layout-btn { all: unset; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-size: 12px; color: var(--muted); text-align: center; }
 .ed-layout-btn .pz-thumb { border-radius: 5px; box-shadow: 0 0 0 1px var(--line-2); }
 .ed-layout-btn:hover .pz-thumb { box-shadow: 0 0 0 2px var(--accent); }
+/* paste properties chooser */
+.ed-props { width: 280px; }
+.ed-props > .ed-hint { margin: 0 0 6px; }
+.ed-props-row { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 4px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.ed-props-row:hover { background: var(--hover); }
+.ed-props-row input { margin: 0; accent-color: var(--accent); }
+.ed-props-row.ed-off { opacity: 0.45; cursor: default; }
+.ed-props-row.ed-off:hover { background: none; }
+.ed-props-btns { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 8px; }
+.ed-props-val { margin-left: auto; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
 
 /* ---------------------------------------------------------------- UI kit */
 .ui-sec { border-bottom: 1px solid var(--line); }
@@ -251,6 +267,8 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ui-icon-btn { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 30px; border-radius: 7px; cursor: pointer; color: var(--text); }
 .ui-icon-btn:hover { background: var(--hover); }
 .ui-icon-btn.ui-on { background: var(--accent-weak); color: var(--accent); }
+.ui-icon-btn:disabled { opacity: 0.35; cursor: default; }
+.ui-icon-btn:disabled:hover { background: none; }
 .ui-icon-btn .pz-ico { width: 17px; height: 17px; }
 .ui-swatch { all: unset; width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--line-2); padding: 3px; box-sizing: border-box; cursor: pointer; background: var(--panel-2); flex: none; }
 .ui-swatch-fill { display: block; width: 100%; height: 100%; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1); }
@@ -344,6 +362,13 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .dlg-ts-meta { flex: none; font: 11px/1.4 system-ui, sans-serif; color: var(--muted); background: var(--panel); border-radius: 6px; padding: 1px 7px; }
 .dlg-ts-side { min-width: 0; }
 .dlg-ts-name { margin: 2px 0 8px; font-size: 15px; }
+.dlg-ts-meta .pz-ico { width: 11px; height: 11px; margin-left: 5px; vertical-align: -1px; color: var(--accent); }
+.dlg-ts-pos { margin-top: 8px; padding-top: 4px; border-top: 1px solid var(--line); }
+.dlg-ts-pos .ui-label { display: flex; align-items: center; gap: 5px; }
+.dlg-ts-pos .ui-label .pz-ico { width: 13px; height: 13px; }
+.dlg-ts-pos .ui-btn-row { margin: 6px 0; }
+.dlg-ts-pos .ui-btn { max-width: 100%; height: auto; min-height: 30px; padding-block: 5px; white-space: normal; text-align: left; }
+.ed-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .dlg-dedication { text-align: center; margin: 16px 0 0; color: var(--muted); font-style: italic; }
 
 /* ---------------------------------------------------------------- studio */

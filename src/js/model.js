@@ -1,7 +1,8 @@
 /* PrezEn · model: the document format, element factories, defaults and validation.
  *
  * A presentation (doc) is plain JSON:
- *   { v:1, id, title, w, h, theme, slides:[slide], effects:{id: customEffect}, assets:{id: dataURL}, password? }
+ *   { v:1, id, title, w, h, theme, textStyles:{id: preset}, tsPos?:{id: {x, y, w}}, slides:[slide], effects:{id: customEffect},
+ *     assets:{id: dataURL}, password? }
  *   slide:   { id, bg, transition:{effect, duration, easing}, auto, hidden, notes, els:[element] }
  *   bg:      { type: color|gradient|image, color, color2, angle, radial, src, fit, overlay, overlayOpacity, page }
  *   element: { id, type:'text'|'image'|'shape'|'icon', x, y, w, h, rot, opacity, locked, shadow, link, anim, ... }
@@ -211,6 +212,86 @@
     }
   };
 
+  // ---------------------------------------------------------------- style positions
+  /* A text style can have a place on the slide (doc.tsPos = {id: {x, y, w}}), taken from one of its texts. Texts of
+   * that style snap to it when moved and can be sent there in one click. Nothing is pinned: a slide can still hold
+   * several texts of one style, anywhere. */
+  PZ.stylePos = (doc, id) => (doc && doc.tsPos && PZ.isTextStyle(id) && doc.tsPos[id]) || null;
+
+  /** Make el's place the position of style id (el null forgets it). */
+  PZ.setStylePos = function (doc, id, el) {
+    if (!PZ.isTextStyle(id)) return;
+    if (el) { doc.tsPos = doc.tsPos || {}; doc.tsPos[id] = { x: el.x, y: el.y, w: el.w }; }
+    else if (doc.tsPos) { delete doc.tsPos[id]; if (!Object.keys(doc.tsPos).length) delete doc.tsPos; }
+  };
+
+  /** True when el sits at the position of its style (to the pixel: layouts and drags can leave fractions). */
+  PZ.atStylePos = function (doc, el) {
+    const p = el && PZ.stylePos(doc, el.ts);
+    return !!p && Math.abs(el.x - p.x) < 0.5 && Math.abs(el.y - p.y) < 0.5 && Math.abs(el.w - p.w) < 0.5;
+  };
+
+  // ---------------------------------------------------------------- copy / paste properties
+  /* "Copy properties" keeps an element without its content; "Paste properties" applies some groups of it to other
+   * elements, which keep their own text, picture or icon. A group only reaches the elements it makes sense for:
+   * the text format goes to texts and shapes, the fill, border and filters only between elements of the same type. */
+  PZ.PROP_GROUPS = [
+    { id: 'pos', name: 'Position' }, { id: 'size', name: 'Size' }, { id: 'rot', name: 'Rotation' },
+    { id: 'text', name: 'Text format' }, { id: 'look', name: 'Appearance' }, { id: 'anim', name: 'Animation' },
+  ];
+  const LOOK_KEYS = { text: [], shape: ['fill', 'fill2', 'gangle', 'stroke', 'sw', 'dash', 'radius'], image: ['radius', 'bw', 'bc', 'filters'], icon: ['color', 'sw'] };
+  const CONTENT_KEYS = ['id', 'html', 'src', 'svg', 'name', 'alt', 'crop', 'link', 'locked'];
+
+  /** What "Copy properties" keeps of an element: everything but its content. */
+  PZ.propsOf = function (el) {
+    const c = PZ.clone(el);
+    CONTENT_KEYS.forEach((k) => delete c[k]);
+    return c;
+  };
+
+  /** Can group g of the copied properties p go to el? Locked elements keep their place, size and angle. */
+  PZ.canPasteProps = function (p, el, g) {
+    if (!p || !el) return false;
+    if (g === 'pos' || g === 'size' || g === 'rot') return !el.locked;
+    if (g === 'text') return !!p.style && !!el.style;
+    return g === 'look' || g === 'anim';
+  };
+
+  /** Apply groups (ids of PZ.PROP_GROUPS) of the copied properties p to el, an element of slide s. True when el changed. */
+  PZ.pasteProps = function (doc, s, el, p, groups) {
+    const before = JSON.stringify(el);
+    const has = (g) => groups.includes(g) && PZ.canPasteProps(p, el, g);
+    if (has('pos')) { el.x = p.x; el.y = p.y; }
+    if (has('size')) {
+      el.w = p.w; el.h = p.h;
+      if (el.type === 'text') el.autoH = p.type === 'text' && p.autoH !== false; // another type gives a fixed height
+    }
+    if (has('rot')) el.rot = p.rot;
+    if (has('text')) {
+      // between texts (or between shapes) the whole format, box included; otherwise the type settings and alignment
+      const keys = p.type === el.type ? Object.keys(el.style) : PZ.TS_KEYS.concat(['align', 'valign']);
+      keys.forEach((k) => { if (k in p.style) el.style[k] = p.style[k]; });
+      if (el.type === 'text') {
+        const ts = p.type === 'text' ? p.ts : el.ts;
+        if (ts) el.ts = ts; else delete el.ts;
+        if (el.ts && (!PZ.isTextStyle(el.ts) || !doc.textStyles[el.ts] || PZ.textStyleModified(doc, el))) delete el.ts;
+      }
+    }
+    if (has('look')) {
+      el.shadow = p.shadow; el.opacity = p.opacity;
+      if (p.type === el.type) LOOK_KEYS[el.type].forEach((k) => { el[k] = PZ.clone(p[k]); });
+    }
+    if (has('anim')) {
+      if (!p.anim) el.anim = null;
+      else {
+        // an animated element keeps its turn; the others play last
+        const order = el.anim ? el.anim.order : Math.max(0, ...s.els.filter((x) => x.anim && x !== el).map((x) => x.anim.order || 0)) + 1;
+        el.anim = Object.assign(PZ.clone(p.anim), { order });
+      }
+    }
+    return JSON.stringify(el) !== before;
+  };
+
   PZ.newDoc = function (o) {
     o = o || {};
     const asp = PZ.ASPECTS.find((a) => a.id === o.aspect) || PZ.ASPECTS[0];
@@ -401,6 +482,18 @@
     return out;
   }
 
+  /** Style positions: kept for known styles only, near the page. */
+  function normStylePos(raw, w, h) {
+    if (!raw || typeof raw !== 'object') return null;
+    const out = {};
+    for (const { id } of PZ.TEXT_STYLES) {
+      const r = raw[id];
+      if (!r || typeof r !== 'object' || !isFinite(r.x) || !isFinite(r.y) || !isFinite(r.w)) continue;
+      out[id] = { x: PZ.clamp(+r.x, -w, 2 * w), y: PZ.clamp(+r.y, -h, 2 * h), w: PZ.clamp(+r.w, 1, 3 * w) };
+    }
+    return Object.keys(out).length ? out : null;
+  }
+
   PZ.normalizeSlide = function (s, theme) {
     if (!s || typeof s !== 'object') return null;
     const t = s.transition && typeof s.transition === 'object' ? s.transition : {};
@@ -426,6 +519,8 @@
       effects: {}, assets: {}, created: N(raw.created, Date.now()), updated: N(raw.updated, Date.now()),
     };
     doc.textStyles = normTextStyles(raw.textStyles, theme, doc.h);
+    const tsPos = normStylePos(raw.tsPos, doc.w, doc.h);
+    if (tsPos) doc.tsPos = tsPos;
     PZ.eachEl(doc, (el) => { if (el.ts && PZ.textStyleModified(doc, el)) delete el.ts; }); // linked texts match their style
     const pw = S(raw.password, '', 128);
     if (pw) doc.password = pw; // asked before opening shared links and exported files (see codec.js)

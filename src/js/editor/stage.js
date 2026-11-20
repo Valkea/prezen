@@ -147,7 +147,7 @@
   }
 
   // ---------------------------------------------------------------- overlay (selection frames, handles, guides)
-  S.renderOverlay = function (guides) {
+  S.renderOverlay = function (guides, home) {
     if (!overlay) return;
     overlay.textContent = '';
     if (crop) {
@@ -183,7 +183,17 @@
       overlay.appendChild(h('div', { class: 'ed-group-frame', style: { left: b.x * k + 'px', top: b.y * k + 'px', width: b.w * k + 'px', height: b.h * k + 'px' } }));
     }
     (guides || []).forEach((g) => overlay.appendChild(h('div', { class: 'ed-guide ' + (g.x != null ? 'ed-gv' : 'ed-gh'), style: g.x != null ? { left: g.x * k + 'px' } : { top: g.y * k + 'px' } })));
+    // while a styled text moves: where its style's position is, solid once the text is there
+    if (home) overlay.appendChild(h('div', { class: 'ed-home' + (home.on ? ' ed-on' : ''), style: { left: home.x * k + 'px', top: home.y * k + 'px', width: home.w * k + 'px', height: home.h * k + 'px' } },
+      h('span', { class: 'ed-home-tag' }, PZ.icon('map-pin'), h('span', { text: t('{name} position', { name: PZ.edInspector.tsName(home.ts) }) }))));
   };
+
+  /** The position of the style of the text being moved or resized alone, as a frame of that text's height (or null). */
+  function homeOf(els) {
+    const el = els.length === 1 ? els[0] : null;
+    const p = el && el.type === 'text' && PZ.stylePos(E.doc, el.ts);
+    return p ? { x: p.x, y: p.y, w: p.w, h: el.h, ts: el.ts } : null;
+  }
 
   function toLogical(e) {
     const r = stage.getBoundingClientRect();
@@ -263,6 +273,7 @@
     if (!items.length) return;
     const box0 = E.bbox(items.map((i) => i.el));
     const targets = snapTargets(new Set(items.map((i) => i.el.id)));
+    const home = homeOf(items.map((i) => i.el));
     let moved = false, dx = 0, dy = 0;
     drag(e, (ev) => {
       const p = toLogical(ev);
@@ -273,14 +284,17 @@
       const guides = [];
       if (!ev.altKey) {
         const thr = 7 / k;
-        const sx = snapAxis([box0.x + dx, box0.x + box0.w / 2 + dx, box0.x + box0.w + dx], targets.xs, thr);
-        const sy = snapAxis([box0.y + dy, box0.y + box0.h / 2 + dy, box0.y + box0.h + dy], targets.ys, thr);
+        const xs = [box0.x + dx, box0.x + box0.w / 2 + dx, box0.x + box0.w + dx], ys = [box0.y + dy, box0.y + box0.h / 2 + dy, box0.y + box0.h + dy];
+        // the style position pulls from further away than the other elements
+        const sx = (home && snapAxis(xs, [home.x, home.x + home.w / 2, home.x + home.w], thr * 2)) || snapAxis(xs, targets.xs, thr);
+        const sy = (home && snapAxis(ys.slice(0, 1), [home.y], thr * 2)) || snapAxis(ys, targets.ys, thr);
         if (sx) { dx += sx.d; guides.push({ x: sx.at }); }
         if (sy) { dy += sy.d; guides.push({ y: sy.at }); }
       }
       dx = Math.round(dx); dy = Math.round(dy);
       items.forEach((i) => { i.el.x = i.x + dx; i.el.y = i.y + dy; if (i.node) PZ.placeElement(i.node, i.el); });
-      S.renderOverlay(guides);
+      if (home) home.on = Math.abs(box0.x + dx - home.x) < 0.5 && Math.abs(box0.y + dy - home.y) < 0.5;
+      S.renderOverlay(guides, home);
     }, () => {
       if (!moved) return;
       items.forEach((i) => { i.el.x = i.x; i.el.y = i.y; });
@@ -299,6 +313,8 @@
     const keepRatio = (ev) => (sx && sy) && (ev.shiftKey !== (el.type === 'image' || el.type === 'icon'));
     let node = nodeOf(el.id);
     const targets = snapTargets(new Set([el.id]));
+    const home = homeOf([el]);
+    if (home) { targets.xs.push(home.x, home.x + home.w); targets.ys.push(home.y); } // edges of the style position
     drag(e, (ev) => {
       const p = toLogical(ev);
       const ddx = p.x - p0.x, ddy = p.y - p0.y;
@@ -405,6 +421,9 @@
       has ? { label: t('Copy'), icon: 'copy', kbd: 'Ctrl+C', run: () => E.copySel() } : null,
       { label: t('Paste'), icon: 'file-text', kbd: 'Ctrl+V', run: () => E.paste() },
       has ? { label: t('Duplicate'), icon: 'copy', kbd: 'Ctrl+D', run: () => E.duplicateSel() } : null,
+      has ? '-' : null,
+      one ? { label: t('Copy properties'), icon: 'brush', kbd: E.PROPS_KEYS.copy, run: () => E.copyProps() } : null,
+      has ? { label: t('Paste properties…'), icon: 'paste', kbd: E.PROPS_KEYS.paste, disabled: !E.props(), run: () => PZ.edInspector.pasteProps(stage, at) } : null,
       has ? '-' : null,
       has ? { label: t('Bring to front'), icon: 'bring-front', kbd: t('Ctrl+Shift+]'), run: () => E.zorder('front') } : null,
       has ? { label: t('Bring forward'), icon: 'chevron-up', kbd: 'Ctrl+]', run: () => E.zorder('forward') } : null,

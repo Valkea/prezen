@@ -168,6 +168,85 @@ test('text styles: untrusted and older files', () => {
   assert.equal(d.textStyles.evil, undefined);
 });
 
+test('style positions: set from a text, forgotten, kept by links, cleaned on load', async () => {
+  const d = PZ.newDoc();
+  d.slides.push(PZ.newSlide(d, 'title-content'));
+  const [h1] = d.slides[1].els;
+  assert.equal(PZ.stylePos(d, 'h1'), null);
+  assert.equal(PZ.atStylePos(d, h1), false);
+  PZ.setStylePos(d, 'h1', h1);
+  assert.deepEqual(plain(d.tsPos), { h1: { x: h1.x, y: h1.y, w: h1.w } });
+  assert.equal(PZ.atStylePos(d, h1), true);
+  h1.y = Math.round(h1.y); // 86.4 from the layout, rounded by a drag
+  assert.equal(PZ.atStylePos(d, h1), true, 'to the pixel');
+  h1.y += 1;
+  assert.equal(PZ.atStylePos(d, h1), false);
+  PZ.setStylePos(d, 'h9', h1);
+  assert.deepEqual(plain(Object.keys(d.tsPos)), ['h1'], 'unknown styles are ignored');
+  const back = await PZ.decodeDoc(await PZ.encodeDoc(d));
+  assert.deepEqual(plain(back.tsPos), plain(d.tsPos));
+  PZ.setStylePos(d, 'h1', null);
+  assert.equal(d.tsPos, undefined, 'no empty object left');
+  const bad = PZ.normalizeDoc({ v: 1, slides: [], tsPos: { h1: { x: 'a', y: 1, w: 2 }, h2: { x: 1e9, y: -3.6, w: 0 }, evil: { x: 1, y: 1, w: 1 } } });
+  assert.deepEqual(plain(bad.tsPos), { h2: { x: 3840, y: -3.6, w: 1 } });
+  assert.equal(PZ.normalizeDoc({ v: 1, slides: [], tsPos: { evil: {} } }).tsPos, undefined);
+});
+
+test('paste properties: each group goes where it fits', () => {
+  const d = PZ.newDoc();
+  d.slides.push(PZ.newSlide(d, 'image-right'));
+  const s = d.slides[1];
+  const [h1, body, img] = s.els;
+  const shape = PZ.make.shape(d, { x: 5, y: 6, w: 70, h: 80, fill: '#00ff00', radius: 9, shadow: 'soft' });
+  s.els.push(shape);
+  Object.assign(h1, { x: 11, y: 22, w: 333, h: 44, rot: 5, opacity: 0.5, anim: { effect: 'fade-in', trigger: 'click', duration: 600, delay: 0, easing: '', order: 7 } });
+  const p = PZ.propsOf(h1);
+  assert.equal(p.html, undefined, 'content is not copied');
+  assert.equal(p.id, undefined);
+
+  assert.equal(PZ.pasteProps(d, s, body, p, ['pos', 'size']), true);
+  assert.deepEqual([body.x, body.y, body.w, body.h, body.autoH, body.rot], [11, 22, 333, 44, true, 0]);
+  assert.equal(PZ.pasteProps(d, s, body, p, ['pos', 'size']), false, 'nothing left to change');
+
+  PZ.pasteProps(d, s, body, p, ['text']);
+  assert.equal(body.ts, 'h1', 'the text style link comes along');
+  assert.equal(body.style.size, d.textStyles.h1.size);
+
+  PZ.pasteProps(d, s, img, p, ['size', 'text', 'look']);
+  assert.deepEqual([img.w, img.h, img.opacity, img.radius], [333, 44, 0.5, 24], 'images take size and opacity, not the text format or the text box');
+
+  PZ.pasteProps(d, s, shape, p, ['text', 'look']);
+  assert.equal(shape.style.size, d.textStyles.h1.size);
+  assert.equal(shape.style.pad, 20, 'a shape keeps its own padding');
+  assert.deepEqual([shape.fill, shape.radius, shape.shadow, shape.opacity], ['#00ff00', 9, '', 0.5], 'fill and corners only between shapes');
+
+  const sp = PZ.propsOf(shape);
+  const other = PZ.make.shape(d, { shape: 'ellipse', fill: '#000000' });
+  s.els.push(other);
+  PZ.pasteProps(d, s, other, sp, ['look']);
+  assert.deepEqual([other.shape, other.fill, other.radius], ['ellipse', '#00ff00', 9]);
+
+  PZ.pasteProps(d, s, img, p, ['anim']);
+  assert.equal(img.anim.effect, 'fade-in');
+  assert.equal(img.anim.order, 8, 'plays after the animations already there');
+  img.anim.order = 3;
+  PZ.pasteProps(d, s, img, p, ['anim']);
+  assert.equal(img.anim.order, 3, 'an animated element keeps its turn');
+  PZ.pasteProps(d, s, img, sp, ['anim']);
+  assert.equal(img.anim, null, 'no animation copied: removed');
+
+  const free = PZ.propsOf(Object.assign(PZ.clone(h1), { style: Object.assign({}, h1.style, { color: '#ff00ff' }) }));
+  PZ.pasteProps(d, s, body, free, ['text']);
+  assert.equal(body.ts, undefined, 'a custom format makes the text custom');
+  assert.equal(body.style.color, '#ff00ff');
+
+  body.locked = true;
+  assert.equal(PZ.canPasteProps(p, body, 'pos'), false);
+  assert.equal(PZ.pasteProps(d, s, body, Object.assign({}, p, { x: 999 }), ['pos', 'size', 'rot']), false, 'locked elements keep their place');
+  assert.equal(PZ.canPasteProps(p, img, 'text'), false);
+  assert.equal(PZ.canPasteProps(PZ.propsOf(img), body, 'text'), false);
+});
+
 test('image crop: clamped, at least 10 % kept, empty crop dropped', () => {
   assert.equal(PZ.normCrop(null), null);
   assert.equal(PZ.normCrop({ t: 0, r: 0, b: 0, l: 0 }), null);

@@ -379,6 +379,8 @@
     const names = { text: t('Text'), image: t('Image'), shape: t((PZ.SHAPES[el.shape] || {}).name || 'Shape'), icon: t('Icon') };
     head(names[el.type], [
       ui.iconBtn(el.locked ? 'lock' : 'unlock', el.locked ? t('Unlock') : t('Lock position'), () => E.commit('Lock', () => { el.locked = !el.locked; }), { on: el.locked }),
+      ui.iconBtn('brush', t('Copy properties ({key})', { key: E.PROPS_KEYS.copy }), () => E.copyProps()),
+      pastePropsBtn(),
       ui.iconBtn('copy', t('Duplicate (Ctrl+D)'), () => E.duplicateSel()),
       ui.iconBtn('trash', t('Delete (Del)'), () => E.deleteSel()),
     ]);
@@ -447,6 +449,9 @@
     const id = el.ts && E.doc.textStyles[el.ts] ? el.ts : '';
     return (tsRow = h('div', { class: 'ed-ts', dataset: { id: el.id } },
       ui.row(t('Text style'), ui.pick(id, tsOptions([custom()]), (v) => useStyle([el], v), tsPick),
+        // the style has a position (Text styles dialog) and this text is elsewhere: one click puts it there
+        id && PZ.stylePos(E.doc, id) && !PZ.atStylePos(E.doc, el) && !el.locked
+          ? ui.iconBtn('target', t('Move to the {name} position', { name: tsName(id) }), () => E.toStylePos(el)) : null,
         ui.iconBtn('sliders', t('Edit text styles…'), () => PZ.edDialogs.textStyles({ select: id }))),
       !id && styleNote && styleNote.id === el.id
         ? h('p', { class: 'ed-hint ed-ts-note', text: t('Now custom: a setting of this text was changed, so it no longer follows {name}.', { name: styleNote.name }) }) : null));
@@ -587,8 +592,60 @@
     return box;
   }
 
+  // ---------------------------------------------------------------- paste properties
+  /** Header button opening the Paste properties chooser (disabled until some properties were copied). */
+  function pastePropsBtn() {
+    const b = ui.iconBtn('paste', t('Paste properties… ({key} pastes the last choice)', { key: E.PROPS_KEYS.paste }), (e) => I.pasteProps(e.currentTarget));
+    b.disabled = !E.props();
+    return b;
+  }
+
+  /** What the copied properties p hold for group g, in a few words. */
+  function propSummary(p, g) {
+    if (g === 'pos') return `X ${Math.round(p.x)} · Y ${Math.round(p.y)}`;
+    if (g === 'size') return `${Math.round(p.w)} × ${Math.round(p.h)}`;
+    if (g === 'rot') return Math.round(p.rot) + '°';
+    if (g === 'text') return !p.style ? '' : p.ts && E.doc.textStyles[p.ts] ? tsName(p.ts) : `${t(p.style.font)} · ${Math.round(p.style.size)} px`;
+    if (g === 'look') return [t('Opacity') + ' ' + Math.round(p.opacity * 100) + '%', p.shadow ? t('Shadow') : '', p.type === 'shape' ? t('Fill') : p.type === 'icon' ? t('Colour') : p.type === 'image' && p.bw ? t('Border') : ''].filter(Boolean).join(' · ');
+    if (g === 'anim') { const f = p.anim && PZ.getEffect(E.doc, p.anim.effect); return !p.anim ? t('None') : f ? PZ.fxName(f) : p.anim.effect; }
+    return '';
+  }
+
+  /** Paste properties chooser, under anchor (or at {x, y}): one checkbox per group, the last choice ticked. */
+  I.pasteProps = function (anchor, at) {
+    const p = E.props(), els = E.selected();
+    if (!p || !els.length) { E.pasteProps(); return; }
+    const last = E.propGroups();
+    const from = p.type === 'text' ? (p.ts && E.doc.textStyles[p.ts] ? tsName(p.ts) : t('Text')) : p.type === 'shape' ? t((PZ.SHAPES[p.shape] || {}).name || 'Shape') : t(p.type === 'icon' ? 'Icon' : 'Image');
+    const boxes = [];
+    const rows = PZ.PROP_GROUPS.map((g) => {
+      const ok = els.some((el) => PZ.canPasteProps(p, el, g.id));
+      const box = h('input', { type: 'checkbox', checked: ok && last.includes(g.id), disabled: !ok, dataset: { g: g.id } });
+      boxes.push(box);
+      return h('label', { class: 'ed-props-row' + (ok ? '' : ' ed-off'), title: ok ? '' : t('The selection cannot take this') }, box,
+        h('span', { text: t(g.name) }), h('span', { class: 'ed-props-val', text: ok ? propSummary(p, g.id) : '' }));
+    });
+    const go = () => { pop.close(); E.pasteProps(boxes.filter((b) => b.checked).map((b) => b.dataset.g)); };
+    const btn = h('button', { class: 'ui-btn ui-small ui-primary', onClick: go }, PZ.icon('paste'), h('span', { text: t('Paste') }));
+    // every group the selection can take, ticked or not; the ticked choice stays the one Ctrl+Alt+V repeats
+    const all = h('button', { class: 'ui-btn ui-small', title: t('Paste everything the selection can take, whatever is ticked'),
+      onClick: () => { pop.close(); E.pasteProps(PZ.PROP_GROUPS.map((g) => g.id), { remember: false }); } }, PZ.icon('paste'), h('span', { text: t('Paste all') }));
+    const body = h('div', { class: 'ed-pop-pad ed-props' },
+      h('div', { class: 'ui-menu-head', text: t('Paste properties') }),
+      h('p', { class: 'ed-hint', text: t('From: {what}', { what: from }) }),
+      rows,
+      h('div', { class: 'ed-props-btns' }, all, btn),
+      h('p', { class: 'ed-hint', text: t('{key} pastes this choice again without opening this list.', { key: E.PROPS_KEYS.paste }) }));
+    body.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // arrows and Enter belong to this list, not to the slide
+      if (e.key === 'Enter') { e.preventDefault(); go(); }
+    });
+    const pop = ui.popover(anchor, body, at ? { at } : { align: 'right' });
+    btn.focus();
+  };
+
   function multiPanel(els) {
-    head(t('{n} elements', { n: els.length }), [ui.iconBtn('copy', t('Duplicate'), () => E.duplicateSel()), ui.iconBtn('trash', t('Delete'), () => E.deleteSel())]);
+    head(t('{n} elements', { n: els.length }), [pastePropsBtn(), ui.iconBtn('copy', t('Duplicate'), () => E.duplicateSel()), ui.iconBtn('trash', t('Delete'), () => E.deleteSel())]);
     pane.appendChild(ui.section('Align & distribute', h('div', null,
       ui.row(t('Align'), h('div', { class: 'ui-btn-group' },
         ui.iconBtn('align-left', t('Align left'), () => E.align('left')), ui.iconBtn('align-center', t('Center horizontally'), () => E.align('hcenter')), ui.iconBtn('align-right', t('Align right'), () => E.align('right')),

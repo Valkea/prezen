@@ -486,6 +486,37 @@
     'Reset to default': 'Réglages par défaut',
     'The default settings for this theme and page size': 'Les réglages par défaut pour ce thème et ce format',
 
+    // ---------------------------------------------------------------- style positions
+    '{name} position': 'Position de {name}',
+    'Move to style position': 'Placer à la position du style',
+    'Move to the {name} position': 'Placer à la position de {name}',
+    'Position on the slides': 'Position sur les diapositives',
+    'Has a position on the slides': 'A une position sur les diapositives',
+    'Use the selected text’s place': 'Utiliser l’emplacement du texte sélectionné',
+    'Select a text on the slide first': 'Sélectionnez d’abord un texte sur la diapositive',
+    'Remove position': 'Retirer la position',
+    '{name} texts snap to this position when moved (Alt: no snapping), and new ones start there. Several can still share a slide.': 'Les textes {name} s’aimantent à cette position quand on les déplace (Alt : sans magnétisme), et les nouveaux y commencent. Plusieurs peuvent toujours partager une diapositive.',
+    'No position: {name} texts go anywhere. Select a text on the slide where they should go, then use its place.': 'Pas de position : les textes {name} vont n’importe où. Sélectionnez sur la diapositive un texte placé là où ils doivent aller, puis utilisez son emplacement.',
+
+    // ---------------------------------------------------------------- copy / paste properties
+    'Copy properties': 'Copier les propriétés',
+    'Copy properties ({key})': 'Copier les propriétés ({key})',
+    'Paste properties': 'Coller les propriétés',
+    'Paste properties…': 'Coller les propriétés…',
+    'Paste properties… ({key} pastes the last choice)': 'Coller les propriétés… ({key} colle le dernier choix)',
+    'Text format': 'Format du texte',
+    'Paste all': 'Tout coller',
+    'Paste everything the selection can take, whatever is ticked': 'Coller tout ce que la sélection peut recevoir, quelles que soient les cases cochées',
+    'From: {what}': 'Depuis : {what}',
+    'The selection cannot take this': 'La sélection ne peut pas recevoir ceci',
+    '{key} pastes this choice again without opening this list.': '{key} colle de nouveau ce choix sans ouvrir cette liste.',
+    'Properties copied. Select other elements, on any slide, then Paste properties ({key}).': 'Propriétés copiées. Sélectionnez d’autres éléments, sur n’importe quelle diapositive, puis Coller les propriétés ({key}).',
+    'No properties copied yet: select an element and use Copy properties ({key}).': 'Aucune propriété copiée : sélectionnez un élément et utilisez Copier les propriétés ({key}).',
+    'Choose what to paste first.': 'Choisissez d’abord ce qu’il faut coller.',
+    'Nothing changed: the selection already has these properties, or cannot take them.': 'Rien n’a changé : la sélection a déjà ces propriétés, ou ne peut pas les recevoir.',
+    'Pasted: {what}': 'Collé : {what}',
+    'Copy / paste properties (position, size, format…)': 'Copier / coller les propriétés (position, taille, format…)',
+
     // ---------------------------------------------------------------- shortcuts, about
     'Shift': 'Maj',
     'wheel': 'molette',
