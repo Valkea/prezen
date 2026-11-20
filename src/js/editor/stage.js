@@ -3,7 +3,7 @@
   'use strict';
   const h = PZ.h, E = PZ.ed, t = PZ.t;
   const S = (PZ.edStage = {});
-  let canvas, stage, host, overlay, k = 0.5, resizeObs = null, globalsBound = false;
+  let canvas, stage, host, overlay, k = 0.5, resizeObs = null, globalsBound = false, spaceHeld = false;
   const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
   const DIRS = { nw: [-1, -1], n: [0, -1], ne: [1, -1], e: [1, 0], se: [1, 1], s: [0, 1], sw: [-1, 1], w: [-1, 0] };
 
@@ -16,11 +16,12 @@
     stage.addEventListener('pointerdown', onDown);
     stage.addEventListener('dblclick', onDbl);
     stage.addEventListener('contextmenu', onContext);
+    canvas.addEventListener('pointerdown', onPanDown, true); // before anything else sees the click
     canvas.addEventListener('pointerdown', (e) => { if (e.target === canvas && e.button === 0) { if (E.editing) S.endEdit(); E.select([]); } });
     canvas.addEventListener('wheel', (e) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
-      S.setZoom(PZ.clamp(k * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.1, 4));
+      S.setZoom(PZ.clamp(k * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.1, 4), { x: e.clientX, y: e.clientY });
     }, { passive: false });
     canvas.addEventListener('dragover', (e) => { e.preventDefault(); canvas.classList.add('ed-drop'); });
     canvas.addEventListener('dragleave', () => canvas.classList.remove('ed-drop'));
@@ -36,7 +37,33 @@
       if (ed && sel.rangeCount && ed.node.contains(sel.anchorNode)) ed.range = sel.getRangeAt(0).cloneRange();
     });
     if (document.fonts) document.fonts.addEventListener('loadingdone', () => { if (!E.editing) S.render(); });
+    window.addEventListener('keydown', onSpaceDown);
+    window.addEventListener('keyup', (e) => { if (e.key === ' ' && spaceHeld) { e.preventDefault(); endPanMode(); } });
+    window.addEventListener('blur', endPanMode);
   };
+
+  // ---------------------------------------------------------------- pan: hold Space over the canvas and drag
+  function onSpaceDown(e) {
+    if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (spaceHeld) { e.preventDefault(); return; } // auto-repeat
+    const typing = E.editing || (e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]'));
+    if (typing || E.player || !canvas || !canvas.isConnected || document.querySelector('.ui-backdrop') || !canvas.matches(':hover')) return;
+    e.preventDefault(); // no page scroll, no click on a focused button
+    spaceHeld = true;
+    canvas.classList.add('ed-pan');
+  }
+  function endPanMode() {
+    spaceHeld = false;
+    if (canvas) canvas.classList.remove('ed-pan');
+  }
+  function onPanDown(e) {
+    if (!spaceHeld || e.button !== 0) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    const x0 = e.clientX, y0 = e.clientY, sl = canvas.scrollLeft, st = canvas.scrollTop;
+    canvas.classList.add('ed-panning');
+    drag(e, (ev) => { canvas.scrollLeft = sl - (ev.clientX - x0); canvas.scrollTop = st - (ev.clientY - y0); },
+      () => canvas.classList.remove('ed-panning'));
+  }
 
   function layout() {
     const W = E.doc.w, H = E.doc.h;
@@ -55,7 +82,18 @@
   }
   S.scale = () => k;
 
-  S.setZoom = function (z) { E.zoom = z; layout(); };
+  /** Zoom, keeping the slide point under `at` (client coordinates; default: the middle of the canvas) where it is. */
+  S.setZoom = function (z, at) {
+    const r = canvas.getBoundingClientRect();
+    const ax = at ? at.x : r.left + canvas.clientWidth / 2, ay = at ? at.y : r.top + canvas.clientHeight / 2;
+    const s0 = stage.getBoundingClientRect();
+    const lx = (ax - s0.left) / k, ly = (ay - s0.top) / k;
+    E.zoom = z;
+    layout();
+    const s1 = stage.getBoundingClientRect();
+    canvas.scrollLeft += s1.left + lx * k - ax;
+    canvas.scrollTop += s1.top + ly * k - ay;
+  };
   S.zoomControl = function () {
     const pct = h('button', { class: 'ed-zoom-pct', title: t('Fit to window'), text: (E.zoom === 'fit' ? t('Fit') + ' · ' : '') + Math.round(k * 100) + '%', onClick: () => S.setZoom('fit') });
     return h('span', { class: 'ed-zoom' },

@@ -394,7 +394,7 @@
       [mod + ' C / X / V', 'Copy / cut / paste (also images and text from other apps)'], [mod + ' D', 'Duplicate'], [mod + ' A', 'Select all'],
       ['Del', 'Delete'], ['Arrows (Shift)', 'Nudge 1 px (10 px)'], ['Enter / double-click', 'Edit text'], ['Tab / Shift Tab', 'Indent / outdent paragraphs and list items (while typing)'],['Enter / double-click', 'Crop the selected picture'], ['Esc', 'Stop editing / deselect'],
       [mod + ' ] / [', 'Forward / backward (Shift: front / back)'], ['T · I · R · E', 'Add text · image · rectangle · ellipse'], ['N', 'New slide'],
-      ['Page ↑ / ↓', 'Previous / next slide'], ['Alt drag', 'Move without snapping'], ['Shift drag', 'Keep proportions / straight lines / 15° steps'], [mod + ' ' + t('wheel'), 'Zoom'],
+      ['Page ↑ / ↓', 'Previous / next slide'], ['Alt drag', 'Move without snapping'], ['Shift drag', 'Keep proportions / straight lines / 15° steps'], [mod + ' ' + t('wheel'), 'Zoom'], ['Space drag', 'Pan (when zoomed in)'],
       ['F5 / Shift F5', 'Present from start / from this slide'],
       ['Presenting', ''], ['→ ↓ Space PgDn', 'Next'], ['← ↑ PgUp', 'Previous'], ['Home / End', 'First / last slide'], ['3 Enter', 'Go to slide 3'], ['O', 'Overview'],
       ['S', 'Presenter view (notes, next slide, timer)'], ['B / W', 'Black / white screen'], ['F', 'Full screen'], ['Esc', 'Exit'],

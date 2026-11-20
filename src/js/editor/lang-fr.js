@@ -508,6 +508,8 @@
     'Move without snapping': 'Déplacer sans magnétisme',
     'Shift drag': 'Maj + glisser',
     'Keep proportions / straight lines / 15° steps': 'Garder les proportions / lignes droites / pas de 15°',
+    'Space drag': 'Espace + glisser',
+    'Pan (when zoomed in)': 'Se déplacer dans la diapo (quand on zoome)',
     'Zoom': 'Zoom',
     'F5 / Shift F5': 'F5 / Maj F5',
     'Present from start / from this slide': 'Présenter depuis le début / depuis cette diapositive',

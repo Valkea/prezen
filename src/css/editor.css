@@ -87,9 +87,14 @@ body.pz-editor-body { margin: 0; background: var(--bg); color: var(--text); font
 .ed-add-slide { all: unset; margin: 8px 10px 12px; display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border: 1.5px dashed var(--line-2); border-radius: 8px; cursor: pointer; color: var(--muted); font-weight: 600; }
 .ed-add-slide:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-weak); }
 
-.ed-canvas { position: relative; overflow: auto; background: var(--canvas); display: grid; place-items: center; padding: 32px; min-width: 0; }
+.ed-canvas { position: relative; overflow: auto; background: var(--canvas); display: grid; padding: 32px; min-width: 0; }
 .ed-canvas.ed-drop { box-shadow: inset 0 0 0 3px var(--accent); }
-.ed-stage { position: relative; box-shadow: 0 6px 30px rgba(31, 42, 46, 0.18), 0 0 0 1px rgba(31, 42, 46, 0.06); flex: none; }
+/* auto margins centre the slide while it fits, and collapse when zoomed in so every side stays reachable by scrolling */
+.ed-stage { position: relative; margin: auto; box-shadow: 0 6px 30px rgba(31, 42, 46, 0.18), 0 0 0 1px rgba(31, 42, 46, 0.06); flex: none; }
+/* Space held: drag to pan (the slide ignores the pointer meanwhile) */
+.ed-canvas.ed-pan, .ed-canvas.ed-panning { cursor: grab; }
+.ed-canvas.ed-panning { cursor: grabbing; }
+.ed-canvas.ed-pan .ed-stage, .ed-canvas.ed-pan .ed-stage *, .ed-canvas.ed-panning .ed-stage, .ed-canvas.ed-panning .ed-stage * { pointer-events: none !important; }
 .ed-slide-host { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .ed-slide-host .pz-el { cursor: move; }
 .ed-slide-host .pz-el:hover { outline: calc(1.5px / var(--k, 1)) solid color-mix(in srgb, var(--sel) 60%, transparent); }
