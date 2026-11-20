@@ -12,6 +12,27 @@
     list = h('div', { class: 'ed-slide-list' });
     const add = h('button', { class: 'ed-add-slide', onClick: (e) => layoutMenu(e.currentTarget, E.cur) }, PZ.icon('plus'), h('span', { text: t('New slide') }));
     pane.append(list, add);
+    // Drag-and-drop reordering is handled on the whole list, so the gaps between thumbnails and the empty space
+    // below the last one are drop targets too (dropping there moves the slide to the end).
+    list.addEventListener('dragover', (e) => {
+      if (!e.dataTransfer.types.includes('text/x-prezen-slide')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      clearDropMarks();
+      const items = list.children, to = dropIndex(e.clientY);
+      if (to < items.length) items[to].classList.add('ed-drop-before');
+      else if (items.length) items[items.length - 1].classList.add('ed-drop-after');
+    });
+    list.addEventListener('dragleave', (e) => { if (!list.contains(e.relatedTarget)) clearDropMarks(); });
+    list.addEventListener('drop', (e) => {
+      const from = parseInt(e.dataTransfer.getData('text/x-prezen-slide'), 10);
+      if (isNaN(from)) return;
+      e.preventDefault(); e.stopPropagation();
+      clearDropMarks();
+      let to = dropIndex(e.clientY);
+      if (from < to) to--;
+      E.moveSlide(from, to);
+    });
     list.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault(); e.stopPropagation();
@@ -21,6 +42,17 @@
       }
     });
   };
+
+  /** Insertion index (0..n) for a drop at viewport height y: before the first thumbnail whose middle lies below y. */
+  function dropIndex(y) {
+    const items = list.children;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) return i;
+    }
+    return items.length;
+  }
+  const clearDropMarks = () => PZ.$$('.ed-drop-before, .ed-drop-after', list).forEach((n) => n.classList.remove('ed-drop-before', 'ed-drop-after'));
 
   function layoutMenu(anchor, after) {
     const grid = h('div', { class: 'ed-layout-grid' });
@@ -62,23 +94,7 @@
     it.addEventListener('click', () => { if (E.cur !== i) E.goSlide(i); else if (E.sel.length) E.select([]); });
     it.addEventListener('contextmenu', (e) => { e.preventDefault(); E.goSlide(i); slideMenu(it, i, { x: e.clientX, y: e.clientY }); });
     it.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/x-prezen-slide', String(i)); e.dataTransfer.effectAllowed = 'move'; it.classList.add('ed-dragging'); });
-    it.addEventListener('dragend', () => { it.classList.remove('ed-dragging'); PZ.$$('.ed-drop-before, .ed-drop-after', list).forEach((n) => n.classList.remove('ed-drop-before', 'ed-drop-after')); });
-    it.addEventListener('dragover', (e) => {
-      if (!e.dataTransfer.types.includes('text/x-prezen-slide')) return;
-      e.preventDefault();
-      const r = it.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
-      PZ.$$('.ed-drop-before, .ed-drop-after', list).forEach((n) => n.classList.remove('ed-drop-before', 'ed-drop-after'));
-      it.classList.add(after ? 'ed-drop-after' : 'ed-drop-before');
-    });
-    it.addEventListener('drop', (e) => {
-      const from = parseInt(e.dataTransfer.getData('text/x-prezen-slide'), 10);
-      if (isNaN(from)) return;
-      e.preventDefault(); e.stopPropagation();
-      const r = it.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
-      let to = i + (after ? 1 : 0);
-      if (from < to) to--;
-      E.moveSlide(from, to);
-    });
+    it.addEventListener('dragend', () => { it.classList.remove('ed-dragging'); clearDropMarks(); });
     return it;
   }
 
