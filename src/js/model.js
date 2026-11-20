@@ -128,6 +128,84 @@
 
   const t = PZ.t;
 
+  // ---------------------------------------------------------------- text styles (Title, Heading 1, Body…)
+  /* A deck has one set of named text styles (doc.textStyles = {id: preset}). A text element linked to one
+   * (el.ts = id) holds a copy of the preset's values in el.style, so rendering, the player and exports need
+   * nothing more. Changing a preset updates every linked text of the deck. A linked text always matches its
+   * style: changing one of those settings on the text alone makes it custom (the editor removes el.ts), and
+   * normalizeDoc unlinks texts that do not match. Alignment, box and padding stay per text. */
+  PZ.TEXT_STYLES = [
+    { id: 'title', name: 'Title' }, { id: 'subtitle', name: 'Subtitle' },
+    { id: 'h1', name: 'Heading 1' }, { id: 'h2', name: 'Heading 2' }, { id: 'h3', name: 'Heading 3' },
+    { id: 'body', name: 'Body' }, { id: 'caption', name: 'Caption' }, { id: 'quote', name: 'Quote' },
+  ];
+  PZ.TS_KEYS = ['font', 'size', 'color', 'bold', 'italic', 'underline', 'lh', 'ls', 'tshadow'];
+  const TS_IDS = new Set(PZ.TEXT_STYLES.map((s) => s.id));
+  PZ.isTextStyle = (id) => typeof id === 'string' && TS_IDS.has(id);
+
+  /** Default presets for a theme and a page height (sizes follow the height, like the layouts). */
+  PZ.defaultTextStyles = function (theme, h) {
+    theme = theme || PZ.defaultTheme();
+    h = h || 1080;
+    const muted = '#5c6577';
+    const p = (size, o) => Object.assign({ font: theme.font || 'Inter', size: Math.round(h * size), color: theme.color || '#1d2433',
+      bold: false, italic: false, underline: false, lh: 1.25, ls: 0, tshadow: '' }, o);
+    return {
+      title: p(0.1, { bold: true, lh: 1.1 }),
+      subtitle: p(0.037, { color: muted }),
+      h1: p(0.065, { bold: true, lh: 1.15 }),
+      h2: p(0.05, { bold: true, lh: 1.2 }),
+      h3: p(0.04, { bold: true }),
+      body: p(0.037, { lh: 1.5 }),
+      caption: p(0.026, { color: muted, lh: 1.3 }),
+      quote: p(0.055, { font: 'Playfair Display', italic: true, lh: 1.3 }),
+    };
+  };
+
+  /** The preset values of a style (only the TS_KEYS of a text style object). */
+  PZ.pickTextStyle = (st) => { const o = {}; for (const k of PZ.TS_KEYS) o[k] = st[k]; return o; };
+
+  /** True when a linked text does not match its style (then it should not be linked). */
+  PZ.textStyleModified = function (doc, el) {
+    const ts = el && el.ts && doc.textStyles && doc.textStyles[el.ts];
+    return !!ts && PZ.TS_KEYS.some((k) => el.style[k] !== ts[k]);
+  };
+
+  /** Link a text element to a style and give it the style's values (id '' unlinks and keeps the look). */
+  PZ.useTextStyle = function (doc, el, id) {
+    if (!el || el.type !== 'text') return;
+    const ts = PZ.isTextStyle(id) && doc.textStyles && doc.textStyles[id];
+    if (!ts) { delete el.ts; return; }
+    el.ts = id;
+    Object.assign(el.style, PZ.pickTextStyle(ts));
+  };
+
+  /** Change a style (next: some or all of its values). Every text of the deck linked to it follows. */
+  PZ.setTextStyle = function (doc, id, next) {
+    const old = doc.textStyles && doc.textStyles[id];
+    if (!old) return;
+    const val = PZ.pickTextStyle(Object.assign({}, old, next));
+    doc.textStyles[id] = val;
+    PZ.eachEl(doc, (el) => { if (el.type === 'text' && el.ts === id) Object.assign(el.style, val); });
+  };
+
+  /** How many texts use each style: {id: count}. */
+  PZ.textStyleUses = function (doc) {
+    const n = {};
+    PZ.eachEl(doc, (el) => { if (el.type === 'text' && el.ts) n[el.ts] = (n[el.ts] || 0) + 1; });
+    return n;
+  };
+
+  /** After a theme change: the styles that used the old theme font or text colour take the new one. */
+  PZ.followTheme = function (doc, oldTheme) {
+    for (const { id } of PZ.TEXT_STYLES) {
+      const cur = doc.textStyles[id], next = {};
+      if (cur.font === oldTheme.font) next.font = doc.theme.font;
+      if (cur.color === oldTheme.color) next.color = doc.theme.color;
+      if (Object.keys(next).length) PZ.setTextStyle(doc, id, next);
+    }
+  };
+
   PZ.newDoc = function (o) {
     o = o || {};
     const asp = PZ.ASPECTS.find((a) => a.id === o.aspect) || PZ.ASPECTS[0];
@@ -137,6 +215,7 @@
       v: 1, id: PZ.uid('d'), title: o.title || t('Untitled presentation'), w: dim(o.w, asp.w), h: dim(o.h, asp.h),
       theme: PZ.defaultTheme(), slides: [], effects: {}, assets: {}, created: Date.now(), updated: Date.now(),
     };
+    doc.textStyles = PZ.defaultTextStyles(doc.theme, doc.h);
     doc.slides.push(PZ.newSlide(doc, 'title'));
     return doc;
   };
@@ -154,8 +233,14 @@
   const base = (type, o) => Object.assign({ id: PZ.uid('e'), type, x: 100, y: 100, w: 400, h: 200, rot: 0, opacity: 1, locked: false, shadow: '', link: '', anim: null }, o);
   const SHAPE_TEXT = { color: '#ffffff', align: 'center', valign: 'middle', size: 40, pad: 20 };
   const styleOf = (doc, o, defaults) => PZ.defaultTextStyle(doc.theme, Object.assign({}, defaults, o && o.style));
+  /** o.ts links the new text to a style of the doc: the style gives its values (o.style can still set alignment…). */
+  const textOf = (doc, o) => {
+    const ts = o && PZ.isTextStyle(o.ts) && doc.textStyles && doc.textStyles[o.ts];
+    if (!ts) { const r = Object.assign({}, o); delete r.ts; return r; }
+    return Object.assign({}, o, { style: Object.assign({}, o.style, PZ.pickTextStyle(ts)) });
+  };
   PZ.make = {
-    text: (doc, o) => base('text', Object.assign({ html: 'Text', autoH: true }, o, { style: styleOf(doc, o) })),
+    text: (doc, o) => { o = textOf(doc, o); return base('text', Object.assign({ html: 'Text', autoH: true }, o, { style: styleOf(doc, o) })); },
     image: (doc, o) => base('image', Object.assign({ src: '', fit: 'cover', pos: '50% 50%', radius: 0, bw: 0, bc: '#ffffff', alt: '', flip: false, filters: null, crop: null }, o)),
     shape: (doc, o) => base('shape', Object.assign({ shape: 'rect', fill: (doc.theme && doc.theme.accent) || '#5b5bf0', fill2: '', gangle: 135,
       stroke: '', sw: 0, dash: '', radius: 0, html: '' }, o, { style: styleOf(doc, o, SHAPE_TEXT) })),
@@ -168,42 +253,42 @@
     { id: 'blank', name: 'Blank', make: () => [] },
     {
       id: 'title', name: 'Title', make: (d) => [
-        T(d, { x: d.w * 0.1, y: d.h * 0.34, w: d.w * 0.8, h: d.h * 0.18, html: t('Presentation title'), style: { size: Math.round(d.h * 0.1), bold: true, align: 'center', valign: 'middle', lh: 1.1 } }),
-        T(d, { x: d.w * 0.15, y: d.h * 0.55, w: d.w * 0.7, h: d.h * 0.08, html: t('Subtitle or author'), style: { size: Math.round(d.h * 0.037), align: 'center', color: '#5c6577' } }),
+        T(d, { x: d.w * 0.1, y: d.h * 0.34, w: d.w * 0.8, h: d.h * 0.18, html: t('Presentation title'), ts: 'title', style: { align: 'center', valign: 'middle' } }),
+        T(d, { x: d.w * 0.15, y: d.h * 0.55, w: d.w * 0.7, h: d.h * 0.08, html: t('Subtitle or author'), ts: 'subtitle', style: { align: 'center' } }),
       ],
     },
     {
       id: 'title-content', name: 'Title & content', make: (d) => [
-        T(d, { x: d.w * 0.07, y: d.h * 0.08, w: d.w * 0.86, h: d.h * 0.13, html: t('Slide title'), style: { size: Math.round(d.h * 0.065), bold: true } }),
-        T(d, { x: d.w * 0.07, y: d.h * 0.26, w: d.w * 0.86, h: d.h * 0.6, html: `<ul><li>${t('First point')}</li><li>${t('Second point')}</li><li>${t('Third point')}</li></ul>`, style: { size: Math.round(d.h * 0.037), lh: 1.5 } }),
+        T(d, { x: d.w * 0.07, y: d.h * 0.08, w: d.w * 0.86, h: d.h * 0.13, html: t('Slide title'), ts: 'h1' }),
+        T(d, { x: d.w * 0.07, y: d.h * 0.26, w: d.w * 0.86, h: d.h * 0.6, html: `<ul><li>${t('First point')}</li><li>${t('Second point')}</li><li>${t('Third point')}</li></ul>`, ts: 'body' }),
       ],
     },
     {
       id: 'section', name: 'Section', make: (d) => [
         PZ.make.shape(d, { x: d.w * 0.07, y: d.h * 0.38, w: d.w * 0.012, h: d.h * 0.24, radius: 8 }),
-        T(d, { x: d.w * 0.1, y: d.h * 0.36, w: d.w * 0.8, h: d.h * 0.16, html: t('Section title'), style: { size: Math.round(d.h * 0.085), bold: true, valign: 'middle' } }),
-        T(d, { x: d.w * 0.1, y: d.h * 0.52, w: d.w * 0.8, h: d.h * 0.08, html: t('A short introduction'), style: { size: Math.round(d.h * 0.035), color: '#5c6577' } }),
+        T(d, { x: d.w * 0.1, y: d.h * 0.36, w: d.w * 0.8, h: d.h * 0.16, html: t('Section title'), ts: 'title', style: { valign: 'middle' } }),
+        T(d, { x: d.w * 0.1, y: d.h * 0.52, w: d.w * 0.8, h: d.h * 0.08, html: t('A short introduction'), ts: 'subtitle' }),
       ],
     },
     {
       id: 'two-col', name: 'Two columns', make: (d) => [
-        T(d, { x: d.w * 0.07, y: d.h * 0.08, w: d.w * 0.86, h: d.h * 0.13, html: t('Comparison'), style: { size: Math.round(d.h * 0.065), bold: true } }),
-        T(d, { x: d.w * 0.07, y: d.h * 0.27, w: d.w * 0.4, h: d.h * 0.55, html: `<b>${t('Left')}</b><ul><li>${t('Point one')}</li><li>${t('Point two')}</li></ul>`, style: { size: Math.round(d.h * 0.035), lh: 1.5 } }),
-        T(d, { x: d.w * 0.53, y: d.h * 0.27, w: d.w * 0.4, h: d.h * 0.55, html: `<b>${t('Right')}</b><ul><li>${t('Point one')}</li><li>${t('Point two')}</li></ul>`, style: { size: Math.round(d.h * 0.035), lh: 1.5 } }),
+        T(d, { x: d.w * 0.07, y: d.h * 0.08, w: d.w * 0.86, h: d.h * 0.13, html: t('Comparison'), ts: 'h1' }),
+        T(d, { x: d.w * 0.07, y: d.h * 0.27, w: d.w * 0.4, h: d.h * 0.55, html: `<b>${t('Left')}</b><ul><li>${t('Point one')}</li><li>${t('Point two')}</li></ul>`, ts: 'body' }),
+        T(d, { x: d.w * 0.53, y: d.h * 0.27, w: d.w * 0.4, h: d.h * 0.55, html: `<b>${t('Right')}</b><ul><li>${t('Point one')}</li><li>${t('Point two')}</li></ul>`, ts: 'body' }),
       ],
     },
     {
       id: 'image-right', name: 'Text & image', make: (d) => [
-        T(d, { x: d.w * 0.07, y: d.h * 0.12, w: d.w * 0.4, h: d.h * 0.14, html: t('Slide title'), style: { size: Math.round(d.h * 0.06), bold: true } }),
-        T(d, { x: d.w * 0.07, y: d.h * 0.3, w: d.w * 0.4, h: d.h * 0.5, html: t('Describe the picture, or tell a story around it.'), style: { size: Math.round(d.h * 0.033), lh: 1.5, color: '#5c6577' } }),
+        T(d, { x: d.w * 0.07, y: d.h * 0.12, w: d.w * 0.4, h: d.h * 0.14, html: t('Slide title'), ts: 'h1' }),
+        T(d, { x: d.w * 0.07, y: d.h * 0.3, w: d.w * 0.4, h: d.h * 0.5, html: t('Describe the picture, or tell a story around it.'), ts: 'body' }),
         PZ.make.image(d, { x: d.w * 0.53, y: d.h * 0.1, w: d.w * 0.4, h: d.h * 0.8, radius: 24 }),
       ],
     },
     {
       id: 'quote', name: 'Quote', make: (d) => [
-        T(d, { x: d.w * 0.12, y: d.h * 0.12, w: d.w * 0.2, h: d.h * 0.25, html: '“', style: { size: Math.round(d.h * 0.3), bold: true, color: (d.theme && d.theme.accent) || '#5b5bf0', font: 'Playfair Display', lh: 1 } }),
-        T(d, { x: d.w * 0.14, y: d.h * 0.32, w: d.w * 0.72, h: d.h * 0.3, html: t('A memorable sentence that sums up your message.'), style: { size: Math.round(d.h * 0.055), italic: true, font: 'Playfair Display', lh: 1.3 } }),
-        T(d, { x: d.w * 0.14, y: d.h * 0.68, w: d.w * 0.72, h: d.h * 0.06, html: t('— Someone wise'), style: { size: Math.round(d.h * 0.03), color: '#5c6577' } }),
+        T(d, { x: d.w * 0.12, y: d.h * 0.12, w: d.w * 0.2, h: d.h * 0.25, html: '“', style: { size: Math.round(d.h * 0.3), bold: true, color: (d.theme && d.theme.accent) || '#5b5bf0', font: (d.textStyles && d.textStyles.quote.font) || 'Playfair Display', lh: 1 } }),
+        T(d, { x: d.w * 0.14, y: d.h * 0.32, w: d.w * 0.72, h: d.h * 0.3, html: t('A memorable sentence that sums up your message.'), ts: 'quote' }),
+        T(d, { x: d.w * 0.14, y: d.h * 0.68, w: d.w * 0.72, h: d.h * 0.06, html: t('— Someone wise'), ts: 'caption' }),
       ],
     },
   ];
@@ -256,6 +341,7 @@
     };
     if (e.type === 'text') {
       el.html = S(e.html, '', 50000); el.autoH = e.autoH !== false; el.style = normStyle(e.style, theme);
+      if (PZ.isTextStyle(e.ts)) el.ts = e.ts;
     } else if (e.type === 'image') {
       el.src = S(e.src, '', 8000000); el.fit = FITS.has(e.fit) ? e.fit : 'cover';
       el.pos = typeof e.pos === 'string' && /^\d{1,3}% \d{1,3}%$/.test(e.pos) ? e.pos : '50% 50%';
@@ -287,6 +373,25 @@
     };
   }
 
+  /** Text style presets: the defaults for this theme and height, with the valid values of raw on top. */
+  function normTextStyles(raw, theme, h) {
+    const out = PZ.defaultTextStyles(theme, h);
+    raw = raw && typeof raw === 'object' ? raw : {};
+    const B = (v, d) => (typeof v === 'boolean' ? v : d);
+    for (const { id } of PZ.TEXT_STYLES) {
+      const r = raw[id], d = out[id];
+      if (!r || typeof r !== 'object') continue;
+      out[id] = {
+        font: typeof r.font === 'string' && /^[\w \-]{1,60}$/.test(r.font) ? r.font : d.font,
+        size: PZ.clamp(N(r.size, d.size), 4, 1000), color: C(r.color, d.color),
+        bold: B(r.bold, d.bold), italic: B(r.italic, d.italic), underline: B(r.underline, d.underline),
+        lh: PZ.clamp(N(r.lh, d.lh), 0.5, 4), ls: PZ.clamp(N(r.ls, d.ls), -20, 100),
+        tshadow: typeof r.tshadow === 'string' && PZ.SHADOWS[r.tshadow] ? r.tshadow : d.tshadow,
+      };
+    }
+    return out;
+  }
+
   PZ.normalizeSlide = function (s, theme) {
     if (!s || typeof s !== 'object') return null;
     const t = s.transition && typeof s.transition === 'object' ? s.transition : {};
@@ -311,6 +416,8 @@
       slides: (Array.isArray(raw.slides) ? raw.slides : []).map((s) => PZ.normalizeSlide(s, theme)).filter(Boolean),
       effects: {}, assets: {}, created: N(raw.created, Date.now()), updated: N(raw.updated, Date.now()),
     };
+    doc.textStyles = normTextStyles(raw.textStyles, theme, doc.h);
+    PZ.eachEl(doc, (el) => { if (el.ts && PZ.textStyleModified(doc, el)) delete el.ts; }); // linked texts match their style
     const pw = S(raw.password, '', 128);
     if (pw) doc.password = pw; // asked before opening shared links and exported files (see codec.js)
     if (!doc.slides.length) doc.slides.push(PZ.newSlide(doc, 'blank'));

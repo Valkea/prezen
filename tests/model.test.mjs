@@ -90,6 +90,84 @@ test('new documents: size presets and custom sizes', () => {
   assert.deepEqual(plain(PZ.normalizeDoc(plain(c))).w, 1200);
 });
 
+test('text styles: new slides use them, links and files keep them', async () => {
+  const d = PZ.newDoc();
+  assert.deepEqual(plain(Object.keys(d.textStyles)), plain(PZ.TEXT_STYLES.map((s) => s.id)));
+  const [title, sub] = d.slides[0].els;
+  assert.equal(title.ts, 'title');
+  assert.equal(sub.ts, 'subtitle');
+  assert.equal(title.style.size, d.textStyles.title.size);
+  assert.equal(title.style.align, 'center', 'alignment stays per text');
+  assert.equal(PZ.textStyleModified(d, title), false);
+  const content = PZ.newSlide(d, 'title-content').els;
+  assert.deepEqual(plain(content.map((e) => e.ts)), ['h1', 'body']);
+  d.textStyles.h1.color = '#ff0000';
+  const back = await PZ.decodeDoc(await PZ.encodeDoc(d));
+  assert.equal(back.textStyles.h1.color, '#ff0000');
+  assert.equal(back.slides[0].els[0].ts, 'title');
+});
+
+test('text styles: changing one updates its texts everywhere, and only them', () => {
+  const d = PZ.newDoc();
+  d.slides.push(PZ.newSlide(d, 'title-content'), PZ.newSlide(d, 'two-col'));
+  const h1s = [d.slides[1].els[0], d.slides[2].els[0]];
+  const loose = PZ.make.text(d, { html: 'free', style: { size: d.textStyles.h1.size } }); // same size, not linked
+  d.slides[2].els.push(loose);
+  PZ.setTextStyle(d, 'h1', { size: 90, color: '#123456', font: 'Poppins' });
+  assert.equal(d.textStyles.h1.size, 90);
+  assert.equal(d.textStyles.h1.bold, true, 'values not given are kept');
+  assert.deepEqual(plain(h1s.map((e) => [e.style.size, e.style.font, e.style.color])), [[90, 'Poppins', '#123456'], [90, 'Poppins', '#123456']]);
+  assert.equal(h1s[0].style.align, 'left', 'alignment is not part of a style');
+  assert.equal(loose.style.size, 70, 'texts without the style are untouched');
+  assert.equal(d.slides[0].els[0].style.size, d.textStyles.title.size, 'other styles are untouched');
+  assert.deepEqual(plain(PZ.textStyleUses(d)), { title: 1, subtitle: 1, h1: 2, body: 3 });
+  PZ.useTextStyle(d, loose, 'h1');
+  assert.equal(loose.style.font, 'Poppins');
+  PZ.useTextStyle(d, loose, '');
+  assert.equal(loose.ts, undefined);
+  assert.equal(loose.style.font, 'Poppins', 'leaving a style keeps the look');
+});
+
+test('text styles: texts that do not match their style are unlinked on load', () => {
+  const d = PZ.newDoc();
+  d.slides[0].els[0].style.color = '#00aa00';
+  assert.equal(PZ.textStyleModified(d, d.slides[0].els[0]), true);
+  const back = PZ.normalizeDoc(plain(d));
+  assert.equal(back.slides[0].els[0].ts, undefined);
+  assert.equal(back.slides[0].els[0].style.color, '#00aa00');
+  assert.equal(back.slides[0].els[1].ts, 'subtitle');
+});
+
+test('text styles: theme changes reach the styles that used the theme', () => {
+  const d = PZ.newDoc();
+  const old = PZ.clone(d.theme);
+  d.textStyles.h2.font = 'Lora';
+  d.theme.font = 'Poppins';
+  d.theme.color = '#222222';
+  PZ.followTheme(d, old);
+  assert.equal(d.textStyles.title.font, 'Poppins');
+  assert.equal(d.slides[0].els[0].style.font, 'Poppins');
+  assert.equal(d.textStyles.h2.font, 'Lora');
+  assert.equal(d.textStyles.quote.font, 'Playfair Display');
+  assert.equal(d.textStyles.body.color, '#222222');
+  assert.equal(d.textStyles.subtitle.color, '#5c6577', 'muted styles keep their colour');
+});
+
+test('text styles: untrusted and older files', () => {
+  const old = PZ.normalizeDoc({ v: 1, h: 2160, slides: [{ els: [{ type: 'text', html: 'x', ts: 'h9' }, { type: 'shape', ts: 'h1' }] }] });
+  assert.equal(old.textStyles.title.size, 216, 'defaults follow the page height');
+  assert.equal(old.slides[0].els[0].ts, undefined);
+  assert.equal(old.slides[0].els[1].ts, undefined, 'only text boxes are linked');
+  const d = PZ.normalizeDoc({ v: 1, textStyles: { title: { size: 5000, color: 'red;x', font: '"><b>', bold: 'yes' }, h1: { italic: true }, evil: { size: 1 } }, slides: [] });
+  assert.equal(d.textStyles.title.size, 1000);
+  assert.equal(d.textStyles.title.color, '#1d2433');
+  assert.equal(d.textStyles.title.font, 'Inter');
+  assert.equal(d.textStyles.title.bold, true, 'invalid values fall back to the default');
+  assert.equal(d.textStyles.h1.italic, true);
+  assert.equal(d.textStyles.h1.bold, true, 'missing values keep the default');
+  assert.equal(d.textStyles.evil, undefined);
+});
+
 test('image crop: clamped, at least 10 % kept, empty crop dropped', () => {
   assert.equal(PZ.normCrop(null), null);
   assert.equal(PZ.normCrop({ t: 0, r: 0, b: 0, l: 0 }), null);
